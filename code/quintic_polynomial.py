@@ -40,7 +40,7 @@ class QuinticPolynomial:
             Compute first derivative given time t
       """
 
-      dot_pt = self.a0 + self.a1*t + self.a2*t** 2 + self.a3*t**3 + self.a4*t**4 + self.a5*t**5
+      dot_pt = self.a1 + self.a2*t + 3 * self.a3*t**2 + 4 * self.a4*t**3+ 5 * self.a5*t**4
       return dot_pt
 
     def compute_second_derivative(self, t):
