@@ -18,7 +18,7 @@ class QuinticPolynomial:
                     [3*T**2, 4*T**3, 5*T**4],
                     [6*T, 12*T**2, 20*T**3]])
     
-      b =np.array([p1 - self.a0 - self.a2 *T**2,
+      b = np.array([p1 - self.a0 -self.a1 *T - self.a2 *T**2,
                   dot_p1 - self.a1 - 2*self.a2*T,
                   ddot_p1-2*self.a2])
       
