@@ -18,7 +18,7 @@ class QuinticPolynomial:
                     [3*T**2, 4*T**3, 5*T**4],
                     [6*T, 12*T**2, 20*T**3]])
     
-      b = np.array([p1 - self.a0 -self.a1 *T - self.a2 *T**2,
+      b = np.array([p1 - self.a0 - self.a1 *T - self.a2 *T**2,
                   dot_p1 - self.a1 - 2*self.a2*T,
                   ddot_p1-2*self.a2])
       
@@ -27,7 +27,7 @@ class QuinticPolynomial:
       self.a3 = x[0]
       self.a4 = x[1]
       self.a5 = x[2]
-
+ 
     def compute_pt(self, t):
       """
             Compute pt given time t
@@ -40,8 +40,9 @@ class QuinticPolynomial:
             Compute first derivative given time t
       """
 
-      dot_pt = self.a1 + self.a2*t + 3 * self.a3*t**2 + 4 * self.a4*t**3+ 5 * self.a5*t**4
+      dot_pt = self.a1 + 2*self.a2*t + 3 * self.a3*t**2 + 4 * self.a4*t**3+ 5 * self.a5*t**4
       return dot_pt
+
 
     def compute_second_derivative(self, t):
       """
@@ -57,3 +58,4 @@ class QuinticPolynomial:
       """
       dddot_pt = 6*self.a3 + 24*self.a4*t + 60*self.a5*t**2
       return dddot_pt
+
