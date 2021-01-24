@@ -106,6 +106,8 @@ class LateralTrajectoryPlanner:
         self.di_interval = di_interval # Interval expressed as tuple (T_min, T_max, delta_t)
         self.t_interval = t_interval # Interval expressed as tuple (D_min, D_max, delta_d)
         self.delta_t = 0.05
+        self.paths = self.generate_range_polynomials(); # store current paths
+        self.opt_path = min(self.paths, key=attrgetter('cd')); # store the beast path
         
 
     def generate_range_polynomials(self) -> [Frenet]:
@@ -119,7 +121,7 @@ class LateralTrajectoryPlanner:
                 f = Frenet()
                 path = QuinticPolynomial(p0, dp0, ddp0, di, 0, 0, tj)
                 # Fill Frenet class
-                f.t = [t for t in np.arange(0, tj, self.delta_t)]#self.t_interval[2])]
+                f.t = [t for t in np.arange(0, tj, self.delta_t)] #self.t_interval[2])]#
                 f.d = [path.compute_pt(t) for t in f.t]
                 f.dot_d = [path.compute_first_derivative(t) for t in f.t]
                 f.ddot_d = [path.compute_second_derivative(t) for t in f.t]
@@ -132,15 +134,25 @@ class LateralTrajectoryPlanner:
                 frenet_paths.append(f)
         return frenet_paths
 
-    def forward_optimal(self) -> (float, float, float):
-        frenet_paths = self.generate_range_polynomials()
-        best_path = min(frenet_paths, key=attrgetter('cd'))
+    def forward_optimal(self) -> ((float, float, float), float):
         sampling_t = -1
-        return ((best_path.d[sampling_t], best_path.dot_d[sampling_t], best_path.ddot_d[sampling_t]),
-                len(best_path.d) * self.delta_t)
+        return ((self.opt_path.d[sampling_t], self.opt_path.dot_d[sampling_t], self.opt_path.ddot_d[sampling_t]),
+                len(self.opt_path.d) * self.delta_t) #self.t_interval[2])#
     
-        
+    def optimal_at_time(self, time) -> (float, float, float):
+        if time <= self.opt_path.t[0]:
+            index = 0
+        elif time >= self.opt_path.t[-1]:
+            index = -1
+        else:
+            index = round((time - self.opt_path.t[0])/self.delta_t)
+        return (self.opt_path.d[index], self.opt_path.dot_d[index], self.opt_path.ddot_d[index])
+    
+    def replan(self, time):
+        self.p0 = self.optimal_at_time(time) # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
+        self.t_initial = time
+        self.paths = self.generate_range_polynomials()
+        self.opt_path = min(self.paths, key=attrgetter('cd'))
         
 
-    
         
