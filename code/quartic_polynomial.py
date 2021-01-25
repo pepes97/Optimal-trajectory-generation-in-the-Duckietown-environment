@@ -1,6 +1,7 @@
 import numpy as np
+from diff_function import DifferentiableFunction
 
-class QuarticPolynomial:
+class QuarticPolynomial(DifferentiableFunction):
 
     def __init__(self, s0, dot_s0, ddot_s0, dot_s1, ddot_s1, T): 
 
@@ -9,6 +10,7 @@ class QuarticPolynomial:
             Final state S1 = [dot_s1, ddot_s1]
             T time 
         """
+        super().__init__()
 
         self.a0 = s0
         self.a1 = dot_s0

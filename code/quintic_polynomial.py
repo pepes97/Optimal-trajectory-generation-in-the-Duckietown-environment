@@ -1,6 +1,7 @@
 import numpy as np
+from diff_function import DifferentiableFunction
 
-class QuinticPolynomial:
+class QuinticPolynomial(DifferentiableFunction):
 
     def __init__(self, p0,dot_p0,ddot_p0,p1,dot_p1,ddot_p1, T):
 
@@ -9,6 +10,7 @@ class QuinticPolynomial:
             Final state P1 = [p1, dot_p1, ddot_p1]
             T time 
       """
+      super().__init__()
 
       self.a0 = p0
       self.a1 = dot_p0

@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 from matplotlib import cm
 from Frenet import Frenet
+import numpy as np
 
 
 def plot_longitudinal_paths(paths: [Frenet]):
@@ -36,5 +37,16 @@ def plot_longitudinal_paths_lst(path_lst: [[Frenet]]):
                 color = 'gray'
             plt.plot(path.t, path.d, color)#c=cm.gnuplot(path.cd / 25))
         plt.plot(min_path.t, min_path.d, '-g', linewidth=2)
+    plt.show()
+
+def plot_unicycle_path(pos_vect: np.array):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.plot(pos_vect[0, :], pos_vect[1, :])
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_title('Unicycle path')
+    ax.legend(['Unicycle path'])
+    plt.grid()
     plt.show()
             
