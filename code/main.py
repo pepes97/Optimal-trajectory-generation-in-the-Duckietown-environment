@@ -10,16 +10,14 @@ s = (0,2)
 Tn = [0,2.5,5]
 
 # target velocity and delta s
-sd = 5
-
-
+# sd = 5
 
 # initialize the planner
 lateral_planner = LateralTrajectoryPlanner(p, t_initial=0, kj=0.1, kt=1.5, kd=1.0,
                                             di_interval=(-2.0, 3.5, 1),
                                             t_interval=(1, 5.1, 0.5), 
-                                            s0=s, si_interval= (-2,8, 3.5),
-                                            sd= sd, kdot_s = 1.5, k_long=1.0, k_lat=1.0)
+                                            s0=s, si_interval= (-2, 1, 1),
+                                             kdot_s = 1.5, k_long=1.0, k_lat=1.0)
 
 frenet_paths = []
 
