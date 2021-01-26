@@ -143,7 +143,8 @@ class LateralTrajectoryPlanner:
                 ft.ddot_s = [path_long.compute_second_derivative(t) for t in ft.t]
                 ft.dddot_s = [path_long.compute_third_derivative(t) for t in ft.t]
                 squared_jerk_long = sum(np.power(ft.dddot_s, 2))
-                ft.cv = self.kj * squared_jerk_long + self.kt * tj + self.kdot_s * (self.sd - si) ** 2 
+                ft.cv = self.kj * squared_jerk_long + self.kt * tj + self.kdot_s * (si - self.sd) ** 2 
+                
                 S = ft.s[-1] - s0
                 
                 for di in np.arange(self.di_interval[0], self.di_interval[1], self.di_interval[2]):
@@ -151,15 +152,15 @@ class LateralTrajectoryPlanner:
                     f = copy.deepcopy(ft)
                     # Fill Frenet class for d
                     if ds0 < SPEED_THRESHOLD: # low speed
-                        path = QuinticPolynomial(p0, dp0, ddp0, di, 0, 0, S)
-                        f.d = [path.compute_pt(s) for s in f.s]
-                        f.dot_d = [path.compute_first_derivative(s) for s in f.s]
-                        f.ddot_d = [path.compute_second_derivative(s) for s in f.s]
-                        f.dddot_d = [path.compute_third_derivative(s) for s in f.s]
+                        path = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, S)
+                        f.d = [path.compute_pt(s-s0) for s in f.s]
+                        f.dot_d = [path.compute_first_derivative(s-s0) for s in f.s]
+                        f.ddot_d = [path.compute_second_derivative(s-s0) for s in f.s]
+                        f.dddot_d = [path.compute_third_derivative(s-s0) for s in f.s]
                         squared_jerk = sum(np.power(f.dddot_d, 2))
                         f.cd = self.kj * squared_jerk + self.kt * S + self.kd * di ** 2 # Compute longitudinal cost low speed
                     else: # high speed
-                        path = QuinticPolynomial(p0, dp0, ddp0, di, 0, 0, tj)
+                        path = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, tj)
                         f.d = [path.compute_pt(t) for t in f.t]
                         f.dot_d = [path.compute_first_derivative(t) for t in f.t]
                         f.ddot_d = [path.compute_second_derivative(t) for t in f.t]

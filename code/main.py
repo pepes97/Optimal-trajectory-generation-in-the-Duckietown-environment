@@ -4,10 +4,10 @@ from plot import plot_longitudinal_paths_lst, plot_longitudinal_paths, plot_late
 
 # initial state
 p=(3,0.5,0) 
-s = (0,1.9)
+s = (1,1.9)
 
 # replanning instants
-Tn = [0, 2]
+Tn = [0, 2, 4]
 
 # target velocity and delta s
 sd = 2.1
@@ -26,8 +26,8 @@ for i,t in enumerate(Tn):
         
     lateral_planner.replan(t)
     
-    print(lateral_planner.p0, lateral_planner.t_initial)
-    print(lateral_planner.s0, lateral_planner.t_initial)
+    print('d0: ', lateral_planner.p0, lateral_planner.t_initial)
+    print('s0: ', lateral_planner.s0, lateral_planner.t_initial)
     
     frenet_paths.append(lateral_planner.paths)
     #plot_longitudinal_paths(frenet_paths[i])
