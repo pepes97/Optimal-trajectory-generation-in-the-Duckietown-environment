@@ -26,20 +26,18 @@ class QuarticPolynomial(DifferentiableFunction):
         self.a3 = x[0]
         self.a4 = x[1]
 
-    def compute_st(self, t):
+    def compute_pt(self, t):
         """
             Compute st given time t
         """
-
-        st = self.a0 + self.a1*t + self.a2*t**2 + self.a3 *t** 3 + self.a4*t**4
-
+        st = self.a0 + self.a1 * t + self.a2 * t ** 2 + self.a3 * t ** 3 + self.a4 * t ** 4
         return st
 
     def compute_first_derivative(self, t):
         """
             Compute first derivative given time t
         """
-        dot_st = self.a1 + 2*self.a2*t + 3*self.a3*t**2 + 4*self.a4*t**3
+        dot_st = self.a1 + 2 * self.a2 * t + 3 * self.a3 * t ** 2 + 4 * self.a4 * t ** 3
 
         return dot_st
 
@@ -48,7 +46,7 @@ class QuarticPolynomial(DifferentiableFunction):
             Compute second derivative given time t
         """
 
-        ddot_st = 2*self.a2 + 6*self.a3*t + 12*self.a4*t**2
+        ddot_st = 2 * self.a2 + 6 * self.a3 * t + 12 * self.a4 * t ** 2
 
         return ddot_st
 
@@ -57,6 +55,6 @@ class QuarticPolynomial(DifferentiableFunction):
             Compute third derivative given time t
         """
         
-        dddot_st = 6*self.a3 + 24*self.a4*t
+        dddot_st = 6 * self.a3 + 24 * self.a4 * t
 
         return dddot_st
