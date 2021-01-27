@@ -130,13 +130,13 @@ def __test_GN():
     plt.show()
 
 def __test_transform():
-    ROBOT_P0 = np.array([0.0, -1.0, 0.0])
+    ROBOT_P0 = np.array([0.0, -1.0, np.pi/8])
     LEN_SIMULATION = 70
     T_end=1 # 1 second evolution
     robot = Unicycle(ROBOT_P0)
     u_vect = np.zeros((2, LEN_SIMULATION), dtype=float)
     # Forward movement
-    u_vect[0, :] = 0.2;
+    u_vect[0, :] = 0.5;
     # Small curvilinear behaviour
     for i in range(LEN_SIMULATION):
         #rotation_step = i / (LEN_SIMULATION-1) * (np.pi / 2)
