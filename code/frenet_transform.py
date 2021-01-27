@@ -92,9 +92,6 @@ class FrenetTransform():
         
     def transform_d(self, dp) -> np.array:
         ...
-        
-        
-
 
 from quintic_polynomial import QuinticPolynomial
 from matplotlib import pyplot as plt
