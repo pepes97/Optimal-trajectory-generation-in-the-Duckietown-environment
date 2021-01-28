@@ -78,7 +78,7 @@ class FrenetTransform():
         """
         return self.R_transform, self.translation_vect
 
-    def transform(self, p) -> np.array:
+    def transform(self, p: np.array) -> np.array:
         """ Transform the unicycle pose in the frenet frame.
         """
         R, t = self.getTransform()
@@ -113,7 +113,7 @@ class FrenetTransform2D(FrenetTransform):
             #print(self.path.compute_first_derivative(estimate))
             error = np.matmul(coordinate_err.T, coordinate_err)
             J = self.path.compute_first_derivative(estimate)
-            H = np.matmul(J.T, J) + 0.01
+            H = np.matmul(J.T, J) + 0.01 # Damping factor
             b = np.matmul(J.T, coordinate_err)
             #print(f'H: {H}')
             #print(f'b: {b}')
@@ -124,12 +124,59 @@ class FrenetTransform2D(FrenetTransform):
             estimate_lst.append(estimate)
         self.proj_estimate = estimate
         return estimate, error_lst, estimate_lst
+
+    def generateLocalFrame(self, radial_threshold: float=0.4):
+        """ Generates a local Frenet frame at the current estimate.
+        See FrenetTransform.generateLocalFrame for more info
+        """
+        projection_origin = self.path.compute_pt(self.proj_estimate)
+        path_gradient = self.path.compute_first_derivative(self.proj_estimate)
+        theta_r = np.arctan2(path_gradient[1], path_gradient[0])
+        cR = np.cos(theta_r)
+        sR = np.sin(theta_r)
+        R = np.array([[cR, -sR], [sR, cR]])
+        tangential_vector = np.matmul(R, np.array([1, 0]))
+        radial_vector = np.matmul(R, np.array([0, 1]))
+        p_robot_vect = projection_origin - self.robot_gpose[0:2]
+        p_robot_distance = np.linalg.norm(p_robot_vect)
+        p_robot_vect /= p_robot_distance
+        if np.dot(radial_vector, p_robot_vect) > radial_threshold:
+            print(f'Warning: Frenet radial vector is far from true distance vector')
+
+        self.theta_r = theta_r
+        self.R_transform = R
+        self.tangential_vect = tangential_vector
+        # CARE MUST BE TAKEN HERE (Next operations rely heavily on radial_vect. Using a different vector from p_robot_vect is dangerous
+        # if it is too far from radial_vect
+        self.radial_vect = radial_vector
+        self.translation_vect = projection_origin
+        self.p_robot_vect = p_robot_vect
+        self.p_robot_distance = p_robot_distance
+
+    def getTransform(self) -> (np.array, np.array):
+        """Returns rotation matrix and translation vector elements that characterize the homogeneous
+        transform between global and local frames.
+        """
+        return self.R_transform, self.translation_vect
+
+    def transform(self, p: np.array) -> np.array:
+        """ Transform the unicycle pose in the frenet frame.
+        """
+        R, t = self.getTransform()
+        r_t = p[2]
+        r_p = p[0:2]
+        # Point in frenet frame
+        p_f = np.matmul(R.T, r_p) - np.matmul(R.T, t)
+        t_f = r_t - self.theta_r
+        return np.array([p_f[0], p_f[1], t_f])
+        
         
 
 from quintic_polynomial import QuinticPolynomial
 from matplotlib import pyplot as plt
 from unicycle import Unicycle
-from plot import plot_unicycle_evolution, plot_unicycle_evolution_animated
+from plot import plot_unicycle_evolution, plot_unicycle_evolution_animated, plot_unicycle_evolution_2D_animated
+
 
 def __test_GN():
     T_end = 1
@@ -231,14 +278,57 @@ def __test_transform():
         est_pose_vect[i] = est_pose
 
     #plot_unicycle_evolution(gpose_vect, fpose_vect, path, T_end)
-    plot_unicycle_evolution_animated(gpose_vect, fpose_vect, est_pose_vect, path, T_end)    
+    plot_unicycle_evolution_animated(gpose_vect, fpose_vect, est_pose_vect, path, T_end)
+
+def __test_transform_2D():
+    p_start = np.array([0.0, 0.0])
+    dp_start = np.array([0.0, 0.0])
+    ddp_start = np.array([-3.0, 0.0])
+    p_end = np.array([10.0, 3.0])
+    dp_end = np.array([1.0, -1.0])
+    ddp_end = np.array([0.0, 0.0])
+    t_start = 0.0
+    t_end = 20.0
+    t = np.arange(t_start, t_end, 0.1)
+    LEN_SIMULATION = t.shape[0]
+
+    trajectory = QuinticTrajectory2D(p_start, dp_start, ddp_start,
+                                     p_end, dp_end, ddp_end,
+                                     t_start, t_end)
+
+    frenet_transform = FrenetTransform2D(trajectory, initial_guess=0.5)
+
+    robot_position = np.array([0.0, 0.0, -np.pi])
+    robot = Unicycle(robot_position)
+    u_vect = np.zeros((2, LEN_SIMULATION))
+    u_vect[0, :] = 1
+    for i in range(LEN_SIMULATION):
+        rotation_step = 0.2 
+        u_vect[1, i] = -rotation_step / 8
+
+    gpose_vect = np.zeros((3, LEN_SIMULATION))
+    gpose_vect[:, 0] = robot_position
+    est_pose_vect = np.zeros(LEN_SIMULATION)
+    fpose_vect = np.zeros((3, LEN_SIMULATION))
+    for i in range(LEN_SIMULATION):
+        p_robot = robot.step(u_vect[:, i])
+        est_pose, _, _ = frenet_transform.estimatePosition(p_robot[0:2])
+        frenet_transform.generateLocalFrame()
+        gpose_vect[:, i] = p_robot.T
+        fpose_vect[:, i] = frenet_transform.transform(p_robot).T
+        est_pose_vect[i] = est_pose
+    plot_unicycle_evolution_2D_animated(gpose_vect, fpose_vect, est_pose_vect, trajectory, t)
+    return
 
 if __name__ == '__main__':
     print('Frenet Transform main script')
+    """ Uncomment the following functions to launch tests."""
     #print('Launching GN test.')
     #__test_GN()
-    print('Launching GN 2D test.')
-    __test_GN_2D()
     #print('Launching Transform test.')
     #__test_transform()
+    #print('Launching GN 2D test.')
+    #__test_GN_2D()
+    print('Launching Transform test.')
+    __test_transform_2D()
     exit(0)
