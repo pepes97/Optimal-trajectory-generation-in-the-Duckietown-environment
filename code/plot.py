@@ -52,6 +52,53 @@ def plot_unicycle_path(pos_vect: np.array):
     ax.legend(['Unicycle path'])
     plt.grid()
     plt.show()
+
+def plot_unicycle_evolution(gpose, fpose, path, T_end):
+    fig, axs = plt.subplots(2)
+    axs[0].plot(gpose[0, :], gpose[1, :], 'r-')
+    path_x = np.arange(0, T_end, 0.05)
+    axs[0].plot(path_x, np.array([path.compute_pt(i) for i in path_x]))
+    axs[0].legend(['Unicycle path', 'Trajectory'])
+    axs[0].set_xlabel('x')
+    axs[0].set_ylabel('y')
+
+    axs[1].plot(fpose[0,:], fpose[1,:])
+    axs[1].set_xlabel('r')
+    axs[1].set_ylabel('d')
+    
+    plt.show()
+
+import matplotlib.animation as animation
+def plot_unicycle_evolution_animated(gpose, fpose, est_pose, path, T_end):
+    fig, axs = plt.subplots(2)
+
+    line, = axs[0].plot(gpose[0, :], gpose[1, :])
+    scat = axs[0].scatter(est_pose[0], path.compute_pt(est_pose[0]), c='r')
+    path_x = np.arange(0, T_end, 0.05)
+    axs[0].plot(path_x, np.array([path.compute_pt(i) for i in path_x]))
+
+    line2, = axs[1].plot(fpose[0,:], fpose[1,:])
+    axs[1].set_xlabel('r')
+    axs[1].set_ylabel('d')
+    def animate(i):
+        line.set_xdata(gpose[0, :i])
+        line.set_ydata(gpose[1, :i])
+        line2.set_xdata(fpose[0, :i])
+        line2.set_ydata(fpose[1, :i])
+        try:
+            scat.set_offsets([est_pose[i], path.compute_pt(est_pose[i])])
+        except:
+            ...
+        return [line, line2, scat]
+
+    ani = animation.FuncAnimation(
+        fig, animate, frames=70, interval=100)
+    axs[0].axis('equal')
+    axs[1].axis('equal')
+    plt.tight_layout()
+    plt.show()
+    ani.save('evol.gif')
+    ...
             
 def plot_longitudinal_paths_lst(path_lst: [[Frenet]]):
     max_cv = 1e6
