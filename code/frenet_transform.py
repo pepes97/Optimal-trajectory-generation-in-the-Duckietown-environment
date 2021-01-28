@@ -31,7 +31,7 @@ class FrenetTransform():
             b = np.matmul(J.T, coordinate_err)
             # Perturbation vector
             Ds = - b / H
-            estimate += Ds * 1
+            estimate += Ds
             
             error_lst.append(error)
             estimate_lst.append(estimate)
@@ -93,6 +93,39 @@ class FrenetTransform():
     def transform_d(self, dp) -> np.array:
         ...
 
+class FrenetTransform2D(FrenetTransform):
+    def __init__(self, path: DifferentiableFunction=None, initial_guess: float=0.0, max_iter: int=10):
+        super().__init__()
+        self.path = path
+        self.max_iter = max_iter
+        self.proj_estimate = initial_guess
+        self.robot_gpose = None
+
+    def estimatePosition(self, p: np.array) -> (float, [float], [float]):
+        """ 2D GN algorithm. See FrenetTransform.estimatePosition for more info
+        """
+        self.robot_gpose = p
+        estimate = self.proj_estimate
+        error_lst = []
+        estimate_lst = []
+        for iter in range(self.max_iter):
+            coordinate_err = self.path.compute_pt(estimate) - p[0:2]
+            #print(self.path.compute_first_derivative(estimate))
+            error = np.matmul(coordinate_err.T, coordinate_err)
+            J = self.path.compute_first_derivative(estimate)
+            H = np.matmul(J.T, J) + 0.01
+            b = np.matmul(J.T, coordinate_err)
+            #print(f'H: {H}')
+            #print(f'b: {b}')
+            Ds = - b / H
+            estimate += Ds
+
+            error_lst.append(error)
+            estimate_lst.append(estimate)
+        self.proj_estimate = estimate
+        return estimate, error_lst, estimate_lst
+        
+
 from quintic_polynomial import QuinticPolynomial
 from matplotlib import pyplot as plt
 from unicycle import Unicycle
@@ -105,7 +138,7 @@ def __test_GN():
     frenet_transform = FrenetTransform(path, initial_guess=0.8, max_iter=ITERATIONS)
     robot_position = np.array([0.4, 0., 0])
     robot_estimate_on_path, error_evolution, estimate_evolution= frenet_transform.estimatePosition(robot_position)
-    x = np.arange(0, 0, 0.05)
+    x = np.arange(0, T_end, 0.05)
     y = np.array([path.compute_pt(s) for s in x])
     fig, axs = plt.subplots(2)
     
@@ -125,6 +158,47 @@ def __test_GN():
     axs[1].set_xlabel('iterations')
     axs[1].set_ylabel('chi_squares')
     plt.show()
+
+from trajectory import QuinticTrajectory2D
+def __test_GN_2D():
+    p_start = np.array([0.0, 0.0])
+    dp_start = np.array([0.0, 0.0])
+    ddp_start = np.array([-3.0, 0.0])
+    p_end = np.array([10.0, 3.0])
+    dp_end = np.array([1.0, -1.0])
+    ddp_end = np.array([0.0, 0.0])
+    t_start = 0.0
+    t_end = 10.0
+
+    trajectory = QuinticTrajectory2D(p_start, dp_start, ddp_start,
+                                     p_end, dp_end, ddp_end,
+                                     t_start, t_end)
+
+    frenet_transform = FrenetTransform2D(trajectory, initial_guess=0.5)
+    robot_position = np.array([-3.0, 3.0, 0.0])
+
+    robot_estimate_on_path, error_evolution, estimate_evolution = frenet_transform.estimatePosition(robot_position)
+
+    t = np.arange(t_start, t_end, 0.1)
+    path_points = np.zeros((2, t.shape[0]))
+    for i in range(t.shape[0]):
+        path_points[:,i] = trajectory.compute_pt(t[i])
+    fig, axs = plt.subplots(2)
+
+    axs[0].plot(path_points[0,:], path_points[1,:])
+    axs[0].scatter(robot_position[0], robot_position[1], c='g')
+    robot_proj = trajectory.compute_pt(robot_estimate_on_path)
+    axs[0].scatter(robot_proj[0], robot_proj[1], c='r')
+    axs[0].plot([robot_position[0], robot_proj[0]], [robot_position[1], robot_proj[1]], 'r-')
+    axs[0].set_xlabel('x')
+    axs[0].set_ylabel('y')
+    axs[0].set_title('Orthogonal projection of unicycle on path2D')
+    axs[0].axis('equal')
+    axs[1].plot(np.array(error_evolution))
+    axs[1].set_xlabel('iterations')
+    axs[1].set_ylabel('chi_squares')
+    plt.show()
+    
 
 def __test_transform():
     ROBOT_P0 = np.array([0.0, -1.0, np.pi/8])
@@ -163,6 +237,8 @@ if __name__ == '__main__':
     print('Frenet Transform main script')
     #print('Launching GN test.')
     #__test_GN()
-    print('Launching Transform test.')
-    __test_transform()
+    print('Launching GN 2D test.')
+    __test_GN_2D()
+    #print('Launching Transform test.')
+    #__test_transform()
     exit(0)

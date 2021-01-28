@@ -53,6 +53,10 @@ def plot_unicycle_path(pos_vect: np.array):
     plt.grid()
     plt.show()
 
+def plot_trajectory2D(path: np.array):
+    assert path.shape[0] == 2
+    plot_unicycle_path(path)
+
 def plot_unicycle_evolution(gpose, fpose, path, T_end):
     fig, axs = plt.subplots(2)
     axs[0].plot(gpose[0, :], gpose[1, :], 'r-')
