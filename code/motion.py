@@ -99,7 +99,7 @@ SPEED_THRESHOLD = 2 # [m/s]
 class LateralTrajectoryPlanner:
     def __init__(self, p0: (float, float, float), t_initial:float, kj: float, kt: float, kd: float,
                  di_interval: (float, float, float), t_interval: (float, float, float),
-                 s0: (float, float, float), si_interval: (float, float, float), kdot_s:float,
+                 s0: (float, float, float), si_interval: (float, float, float), sd:float, kdot_s:float,
                  k_lat: float, k_long:float):
         self.p0 = p0 # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
         self.t_initial = t_initial
@@ -111,6 +111,7 @@ class LateralTrajectoryPlanner:
         self.delta_t = 0.05
         self.s0 = s0
         self.si_interval = si_interval # Interval expressed as tuple (sd - delta_si, sd + delta_si, delta_s)
+        self.sd = sd
         self.kdot_s = kdot_s
         self.k_long = k_long
         self.k_lat = k_lat
@@ -133,7 +134,7 @@ class LateralTrajectoryPlanner:
             
             for tj in np.arange(self.t_interval[0], self.t_interval[1], self.t_interval[2]):
             
-                path_long = QuarticPolynomial(s0, ds0, 0, si, 0.0, tj)
+                path_long = QuarticPolynomial(s0, ds0, 0.0, si, 0.0, tj)
                 # Fill Frenet class for s
                 ft = Frenet()
                 ft.t = [t for t in np.arange(0, tj, self.delta_t)]
@@ -142,19 +143,30 @@ class LateralTrajectoryPlanner:
                 ft.ddot_s = [path_long.compute_second_derivative(t) for t in ft.t]
                 ft.dddot_s = [path_long.compute_third_derivative(t) for t in ft.t]
                 squared_jerk_long = sum(np.power(ft.dddot_s, 2))
-                ft.cv = self.kj * squared_jerk_long + self.kt * tj + self.kdot_s * (si - ft.dot_s[-1]) ** 2 
+                ft.cv = self.kj * squared_jerk_long + self.kt * tj + self.kdot_s * (si - self.sd) ** 2 
+                
+                S = ft.s[-1] - s0
                 
                 for di in np.arange(self.di_interval[0], self.di_interval[1], self.di_interval[2]):
                     
                     f = copy.deepcopy(ft)
-                    path = QuinticPolynomial(p0, dp0, ddp0, di, 0, 0, tj)
                     # Fill Frenet class for d
-                    f.d = [path.compute_pt(t) for t in f.t]
-                    f.dot_d = [path.compute_first_derivative(t) for t in f.t]
-                    f.ddot_d = [path.compute_second_derivative(t) for t in f.t]
-                    f.dddot_d = [path.compute_third_derivative(t) for t in f.t]
-                    squared_jerk = sum(np.power(f.dddot_d, 2))
-                    f.cd = self.kj * squared_jerk + self.kt * tj + self.kd * di ** 2 # Compute longitudinal cost
+                    if ds0 < SPEED_THRESHOLD: # low speed
+                        path = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, S)
+                        f.d = [path.compute_pt(s-s0) for s in f.s]
+                        f.dot_d = [path.compute_first_derivative(s-s0) for s in f.s]
+                        f.ddot_d = [path.compute_second_derivative(s-s0) for s in f.s]
+                        f.dddot_d = [path.compute_third_derivative(s-s0) for s in f.s]
+                        squared_jerk = sum(np.power(f.dddot_d, 2))
+                        f.cd = self.kj * squared_jerk + self.kt * S + self.kd * di ** 2 # Compute longitudinal cost low speed
+                    else: # high speed
+                        path = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, tj)
+                        f.d = [path.compute_pt(t) for t in f.t]
+                        f.dot_d = [path.compute_first_derivative(t) for t in f.t]
+                        f.ddot_d = [path.compute_second_derivative(t) for t in f.t]
+                        f.dddot_d = [path.compute_third_derivative(t) for t in f.t]
+                        squared_jerk = sum(np.power(f.dddot_d, 2))
+                        f.cd = self.kj * squared_jerk + self.kt * tj + self.kd * di ** 2 # Compute longitudinal cost
                     f.ctot = self.k_lat * squared_jerk + self.k_long * squared_jerk_long
                     # Transform f.t into real time coordinates
                     for i in range(len(f.t)):
@@ -188,6 +200,3 @@ class LateralTrajectoryPlanner:
         self.opt_path_d = min(self.paths, key=attrgetter('cd'))
         self.opt_path_s = min(self.paths, key=attrgetter('cv'))
         self.opt_path_tot = min(self.paths, key=attrgetter('ctot'))
-        
-
-        
