@@ -4,15 +4,15 @@ from plot import plot_longitudinal_paths_lst, plot_longitudinal_paths, plot_late
 
 # initial state
 p = (3,0.5,0) 
-s = (0,0)
+s = (0,2, -0.1)
 
 # replanning instants
-Tn = [0, 2, 4, 6]
+Tn = [0, 2.5, 5]
 
 # target velocity and delta s
-sd = 8
-delta_s = 1
-num_samples = 1
+sd = 5
+delta_s = 3
+num_samples = 3
 # initialize the planner
 lateral_planner = LateralTrajectoryPlanner(p, t_initial=0, kj=0.1, kt=1.0, kd=1.0,
                                             di_interval=(-2.0, 3.5, 1),
