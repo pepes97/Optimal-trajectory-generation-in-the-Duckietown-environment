@@ -92,7 +92,7 @@ def plot_unicycle_evolution_animated(gpose, fpose, est_pose, path, T_end):
         return [line, line2, scat]
 
     ani = animation.FuncAnimation(
-        fig, animate, frames=70, interval=100)
+        fig, animate, frames=gpose.shape[1], interval=100)
     axs[0].axis('equal')
     axs[1].axis('equal')
     plt.tight_layout()
