@@ -53,6 +53,10 @@ def plot_unicycle_path(pos_vect: np.array):
     plt.grid()
     plt.show()
 
+def plot_trajectory2D(path: np.array):
+    assert path.shape[0] == 2
+    plot_unicycle_path(path)
+
 def plot_unicycle_evolution(gpose, fpose, path, T_end):
     fig, axs = plt.subplots(2)
     axs[0].plot(gpose[0, :], gpose[1, :], 'r-')
@@ -97,8 +101,48 @@ def plot_unicycle_evolution_animated(gpose, fpose, est_pose, path, T_end):
     axs[1].axis('equal')
     plt.tight_layout()
     plt.show()
-    ani.save('evol.gif')
-    ...
+    #ani.save('evol.gif')
+
+def plot_unicycle_evolution_2D_animated(gpose, fpose, est_pose, path, t):
+    fig, axs = plt.subplots(2)
+    # Plot path
+    path_vect = np.zeros((2, t.shape[0]))
+    for i in range(t.shape[0]):
+        path_i = path.compute_pt(t[i])
+        path_vect[:, i] = path_i.T
+    axs[0].plot(path_vect[0, :], path_vect[1, :])
+    # Plot robot global pose
+    line1, = axs[0].plot(gpose[0, :], gpose[1, :])
+    line2, = axs[1].plot(fpose[0, :], fpose[1, :])
+    # Plot robot projection on path
+    proj_pose = path.compute_pt(est_pose[0])
+    scat = axs[0].scatter(proj_pose[0], proj_pose[1], c='r')
+
+    # Animation function
+    def animate(i):
+        line1.set_xdata(gpose[0, :i])
+        line1.set_ydata(gpose[1, :i])
+        line2.set_xdata(fpose[0, :i])
+        line2.set_ydata(fpose[1, :i])
+        proj_pose = path.compute_pt(est_pose[i])
+        scat.set_offsets([proj_pose[0], proj_pose[1]])
+        return [line1, line2, scat]
+
+    ani = animation.FuncAnimation(
+        fig, animate, frames=t.shape[0], interval=100, repeat=False)
+    axs[0].set_xlabel('x')
+    axs[0].set_ylabel('y')
+    axs[1].set_xlabel('r')
+    axs[1].set_ylabel('d')
+    axs[0].axis('equal')
+    axs[1].axis('equal')
+    plt.tight_layout()
+    plt.show()
+    ani.save('evol2D.gif')
+    
+    
+    
+    
             
 def plot_longitudinal_paths_lst(path_lst: [[Frenet]]):
     max_cv = 1e6
