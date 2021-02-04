@@ -33,12 +33,14 @@ class LateralTrajectoryPlanner:
         self.opt_path_tot = min(self.paths, key=attrgetter('ctot')); # store the best path for s
         
 
-    def generate_range_polynomials(self) -> [Frenet]:
+    def generate_range_polynomials(self, replan_interval = None) -> [Frenet]:
         """ Generates a range of possible polynomials paths, each with its associated cost """
         frenet_paths = []
         p0 = self.p0[0]
         dp0 = self.p0[1]
         ddp0 = self.p0[2]
+        if replan_interval != None:
+             self.si_interval = replan_interval
         s0 = self.s0[0]
         ds0 = self.s0[1]
         dds0 = self.s0[2]
@@ -105,11 +107,14 @@ class LateralTrajectoryPlanner:
         else:
             return (opt_path.d[index], opt_path.dot_d[index], opt_path.ddot_d[index])
     
-    def replan(self, time):
+    def replan(self, time, replan_interval=None):
         self.p0 = self.optimal_at_time(time, self.opt_path_d, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
         self.s0 = self.optimal_at_time(time, self.opt_path_s, "s") # Initial step in frenet-frame as tuple (s0, ds0)
         self.t_initial = time
-        self.paths = self.generate_range_polynomials()
+        if replan_interval != None:
+            self.paths = self.generate_range_polynomials(replan_interval) 
+        else:
+            self.paths = self.generate_range_polynomials()
         self.opt_path_d = min(self.paths, key=attrgetter('cd'))
         self.opt_path_s = min(self.paths, key=attrgetter('cv'))
         self.opt_path_tot = min(self.paths, key=attrgetter('ctot'))

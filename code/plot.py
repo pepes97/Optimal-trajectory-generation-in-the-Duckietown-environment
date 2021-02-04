@@ -17,8 +17,8 @@ def plot_lateral_paths(paths: [Frenet]):
         color = 'k'
         if path.cd > 1000:
             color = 'gray'
-        plt.plot(path.t, path.d, color)#c=cm.gnuplot(path.cd / 25))
-    plt.plot(min_path.t, min_path.d, '-g', linewidth=2)
+        plt.plot(path.t, path.d, color, linewidth=0.5)#c=cm.gnuplot(path.cd / 25))
+    plt.plot(min_path.t, min_path.d, '-g', linewidth=1)
     plt.show()
 
 def plot_lateral_paths_lst(path_lst: [[Frenet]]):
@@ -33,9 +33,9 @@ def plot_lateral_paths_lst(path_lst: [[Frenet]]):
                 min_cd = path.cd
                 min_path = path
             color = 'k'
-            if path.cd > 1000:
+            if path.cd > 30:
                 color = 'gray'
-            plt.plot(path.t, path.d, color)#c=cm.gnuplot(path.cd / 25))
+            plt.plot(path.t, path.d, color, linewidth= 0.5)#c=cm.gnuplot(path.cd / 25))
             plt.plot(path.t[0], path.d[0], "og")
             plt.xlabel("t/s")
             plt.ylabel("d/m")
@@ -156,9 +156,9 @@ def plot_longitudinal_paths_lst(path_lst: [[Frenet]]):
                 min_cv = path.cv
                 min_path = path
             color = 'k'
-            if path.cv > 1000:
+            if path.cv > 30:
                 color = 'gray'
-            plt.plot(path.t, path.dot_s, color)#c=cm.gnuplot(path.cv / 25))
+            plt.plot(path.t, path.dot_s, color, linewidth = 0.5)#c=cm.gnuplot(path.cv / 25))
             plt.plot(path.t[0], path.dot_s[0], "og")
             plt.xlabel("t/s")
             plt.ylabel("$\dot{s}$/m/s")
