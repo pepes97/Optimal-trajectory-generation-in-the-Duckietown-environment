@@ -5,94 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from operator import attrgetter
 import copy
-# constants K
-
-# KJ = 0.1
-# KT = 0.1
-# KD = 1.0
-# KDOT = 1.0
-# KLAT = 1.0
-# KLON = 1.0
-
-# # for lateral motion 
-
-# DI_INTERVAL = 7 # [m]
-# STEP = 0.5 # [m]
-
-# MIN_TIME = 1.0 # [s]
-# MAX_TIME = 10.0 # [s]
-# STEP_TIME = 0.5 # [s]
-
-# # for longitudinal motion
-
-# DELTA_SI = 1 # [m/s]
-# TARGET_SPEED = 4 # [m/s]
-
-
-# def lateral_motionLST_and_longitudinal_motionVK(p0, dp0, ddp0, s0, ds0):
-
-#     """
-#         Lateral Movement and Longitudinal movement with velocity keeping
-
-#         Start state = [p0, dp0, ddp0] using for coordinate d of Franet Frame
-#         Start state = [s0, ds0] using for coordinate s of Franet Frame
-
-#     """
-
-#     frenet_paths = []
-#     for di in np.arange(-DI_INTERVAL, DI_INTERVAL, STEP):
-
-#         # Lateral motion planning
-
-#         for Tj in np.arange(MIN_TIME,MAX_TIME, STEP_TIME):
-            
-#             f = Frenet()
-
-#             latQP = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, Tj)
-
-#             f.t = [t for t in np.arange(0.0, Tj, STEP_TIME)]
-#             f.d = [latQP.compute_pt(t) for t in f.t]
-#             f.dot_d = [latQP.compute_first_derivative(t) for t in f.t]
-#             f.ddot_d = [latQP.compute_second_derivative(t) for t in f.t]
-#             f.dddot_d = [latQP.compute_third_derivative(t) for t in f.t]
-
-#             # square jerk
-
-#             Jlat = sum(np.power(f.dddot_d, 2)) 
-
-#             # control
-
-#             f.cd = KJ * Jlat + KT * Tj + KD * f.d[-1] ** 2
-
-#             # Longitudinal motion planning 
-
-#             for si in np.arange (0, TARGET_SPEED + DELTA_SI):
-#                 lonQP = QuarticPolynomial(s0, ds0, 0.0, si, 0.0, Tj)
-#                 f.s = [lonQP.compute_st(t) for t in f.t]
-#                 f.dot_s = [lonQP.compute_first_derivative(t) for t in f.t]
-#                 f.ddot_s = [lonQP.compute_second_derivative(t) for t in f.t]
-#                 f.dddot_s = [lonQP.compute_third_derivative(t) for t in f.t]
-
-#                 # square of jerk
-
-#                 Jt = sum(np.power(f.dddot_s, 2))  
-
-#                 # control
-
-#                 f.cv = KJ*Jt + KT*Tj + KDOT*((f.dot_s[-1]-TARGET_SPEED)**2)
-
-#                 f.tot = KLAT * f.cd + KLON * f.cv
-
-#             frenet_paths.append(f)
-
-#     for i in range(len(frenet_paths)):
-#         f = frenet_paths[i]
-#         plt.plot(f.t,f.d)
-#         plt.xlabel("t/s")
-#         plt.ylabel("d/m")
-#     plt.show()
-        
-#     return frenet_paths
 
 SPEED_THRESHOLD = 2 # [m/s]
 
@@ -121,20 +33,23 @@ class LateralTrajectoryPlanner:
         self.opt_path_tot = min(self.paths, key=attrgetter('ctot')); # store the best path for s
         
 
-    def generate_range_polynomials(self) -> [Frenet]:
+    def generate_range_polynomials(self, replan_interval = None) -> [Frenet]:
         """ Generates a range of possible polynomials paths, each with its associated cost """
         frenet_paths = []
         p0 = self.p0[0]
         dp0 = self.p0[1]
         ddp0 = self.p0[2]
+        if replan_interval != None:
+             self.si_interval = replan_interval
         s0 = self.s0[0]
         ds0 = self.s0[1]
+        dds0 = self.s0[2]
         # Lateral
         for si in np.arange(self.si_interval[0], self.si_interval[1], self.si_interval[2]):
             
             for tj in np.arange(self.t_interval[0], self.t_interval[1], self.t_interval[2]):
             
-                path_long = QuarticPolynomial(s0, ds0, 0.0, si, 0.0, tj)
+                path_long = QuarticPolynomial(s0, ds0, dds0, si, 0.0, tj)
                 # Fill Frenet class for s
                 ft = Frenet()
                 ft.t = [t for t in np.arange(0, tj, self.delta_t)]
@@ -192,11 +107,14 @@ class LateralTrajectoryPlanner:
         else:
             return (opt_path.d[index], opt_path.dot_d[index], opt_path.ddot_d[index])
     
-    def replan(self, time):
+    def replan(self, time, replan_interval=None):
         self.p0 = self.optimal_at_time(time, self.opt_path_d, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
         self.s0 = self.optimal_at_time(time, self.opt_path_s, "s") # Initial step in frenet-frame as tuple (s0, ds0)
         self.t_initial = time
-        self.paths = self.generate_range_polynomials()
+        if replan_interval != None:
+            self.paths = self.generate_range_polynomials(replan_interval) 
+        else:
+            self.paths = self.generate_range_polynomials()
         self.opt_path_d = min(self.paths, key=attrgetter('cd'))
         self.opt_path_s = min(self.paths, key=attrgetter('cv'))
         self.opt_path_tot = min(self.paths, key=attrgetter('ctot'))
