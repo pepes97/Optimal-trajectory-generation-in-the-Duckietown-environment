@@ -196,13 +196,13 @@ def plot_lateral_paths_lst_ctot(path_lst: [[Frenet]]):
         min_ctot = max_ctot
         min_path = None
         for path in plst:
-            if path.cd < min_ctot:
+            if path.ctot < min_ctot:
                 min_ctot = path.ctot
                 min_path = path
             color = 'k'
-            if path.ctot > 1000:
+            if path.ctot > 30:
                 color = 'gray'
-            plt.plot(path.t, path.d, color)#c=cm.gnuplot(path.cd / 25))
+            plt.plot(path.t, path.d, color, linewidth = 0.5)#c=cm.gnuplot(path.cd / 25))
             plt.plot(path.t[0], path.d[0], "og")
             plt.xlabel("t/s")
             plt.ylabel("d/m")
@@ -218,15 +218,37 @@ def plot_longitudinal_paths_lst_ctot(path_lst: [[Frenet]]):
         min_ctot = max_ctot
         min_path = None
         for path in plst:
-            if path.cd < min_ctot:
+            if path.ctot < min_ctot:
                 min_ctot = path.ctot
                 min_path = path
             color = 'k'
-            if path.cv > 1000:
+            if path.ctot > 30:
                 color = 'gray'
-            plt.plot(path.t, path.dot_s, color)#c=cm.gnuplot(path.cv / 25))
+            plt.plot(path.t, path.dot_s, color, linewidth = 0.5)#c=cm.gnuplot(path.cv / 25))
             plt.plot(path.t[0], path.dot_s[0], "og")
             plt.xlabel("t/s")
             plt.ylabel("$\dot{s}$/m/s")
         plt.plot(min_path.t, min_path.dot_s, '-g', linewidth=2)
+    plt.show()
+
+def plot_following_paths_lst_ctot(path_lst: [[Frenet]], target: Frenet):
+    max_ctot = 1e6
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    for plst in path_lst:
+        min_ctot = max_ctot
+        min_path = None
+        for path in plst:
+            if path.ctot < min_ctot:
+                min_ctot = path.ctot
+                min_path = path
+            color = 'k'
+            if path.ctot > 30:
+                color = 'gray'
+            plt.plot(path.t, path.s, color, linewidth = 0.5)#c=cm.gnuplot(path.cv / 25))
+            plt.plot(path.t[0], path.s[0], "og")
+            plt.xlabel("t/s")
+            plt.ylabel("s/m")
+        plt.plot(min_path.t, min_path.s, '-g', linewidth=2)
+        plt.plot(target.t, target.s, '-b', linewidth=2)
     plt.show()

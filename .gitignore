@@ -4,3 +4,5 @@
 ./__pycache__/*
 code/__pycache__/*
 code/*~
+__pycache__/
+__pycache__/*
