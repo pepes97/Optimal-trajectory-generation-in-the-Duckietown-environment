@@ -200,12 +200,14 @@ def plot_lateral_paths_lst_ctot(path_lst: [[Frenet]]):
                 min_ctot = path.ctot
                 min_path = path
             color = 'k'
-            if path.ctot > 30:
+            if path.ctot > 30 and path.ctot < 1000:
                 color = 'gray'
-            plt.plot(path.t, path.d, color, linewidth = 0.5)#c=cm.gnuplot(path.cd / 25))
-            plt.plot(path.t[0], path.d[0], "og")
-            plt.xlabel("t/s")
-            plt.ylabel("d/m")
+            if path.ctot < 30:
+                color = 'k'
+                plt.plot(path.t, path.d, color, linewidth = 0.5)#c=cm.gnuplot(path.cd / 25))
+                plt.plot(path.t[0], path.d[0], "og")
+                plt.xlabel("t/s")
+                plt.ylabel("d/m")
         plt.plot(min_path.t, min_path.d, '-g', linewidth=2)
     plt.show()
 

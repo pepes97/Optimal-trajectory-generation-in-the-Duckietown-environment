@@ -43,6 +43,9 @@ class FrenetTrajectoryPlanner:
         ds0 = self.s0[1]
         dds0 = self.s0[2]
 
+        self.si_interval = (round(-cfg.D_D_S*cfg.N_S_SAMPLE),round(+cfg.D_D_S*cfg.N_S_SAMPLE+cfg.D_D_S),cfg.D_D_S)
+        self.dsi_interval = (round(ds0-cfg.D_D_S*cfg.N_S_SAMPLE),round(ds0+cfg.D_D_S*cfg.N_S_SAMPLE+cfg.D_D_S),cfg.D_D_S) # Interval expressed as tuple (dsd - delta_dsi, dsd + delta_dsi, delta_s)
+ 
         if self.s_target != None:
             long_interval = np.arange(self.si_interval[0], self.si_interval[1], self.si_interval[2])
         else:
@@ -53,8 +56,7 @@ class FrenetTrajectoryPlanner:
                 # Fill Frenet class for s
                 ft = Frenet()
                 if self.s_target != None:
-                    index = round((tj - self.s_target.t[0])/self.delta_t)
-                    # sd = self.s_target.s[-1]
+                    index = round((self.t_initial + tj - self.s_target.t[0])/self.delta_t)
                     st = self.s_target.s[index]
                     dst = self.s_target.dot_s[index]
                     ddst = self.s_target.ddot_s[index]
@@ -67,7 +69,7 @@ class FrenetTrajectoryPlanner:
                     squared_jerklong = sum(np.power(ft.dddot_s, 2))
                     C_long = ft.ct = self.kj * squared_jerklong + self.kt * tj + self.ks * (ft.s[-1] - st) ** 2 
                 else:
-                    path_long = QuarticPolynomial(s0, ds0, dds0, self.dsd + si_dsi, 0.0, tj)
+                    path_long = QuarticPolynomial(s0, ds0, dds0, si_dsi, 0.0, tj) #self.dsd +
                     ft.t = [t for t in np.arange(0, tj+self.delta_t, self.delta_t)]
                     ft.s = [path_long.compute_pt(t) for t in ft.t]
                     ft.dot_s = [path_long.compute_first_derivative(t) for t in ft.t]
@@ -75,25 +77,25 @@ class FrenetTrajectoryPlanner:
                     ft.dddot_s = [path_long.compute_third_derivative(t) for t in ft.t]
                     squared_jerklong = sum(np.power(ft.dddot_s, 2))
                     C_long = ft.cv = self.kj * squared_jerklong + self.kt * tj + self.kdots * (ft.dot_s[-1] - self.dsd) ** 2 
-                S = ft.s[-1] - s0
+                S = abs(ft.s[-1] - s0)
                 for di in np.arange(self.di_interval[0], self.di_interval[1], self.di_interval[2]):
                     f = copy.deepcopy(ft)
                     # Fill Frenet class for d
                     if ds0 < cfg.LOW_SPEED_THRESH: # low speed
-                        if S>cfg.S_THRSH:
-                            path = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, S)
-                            f.d = [path.compute_pt(s-s0) for s in f.s]
-                            f.dot_d = [path.compute_first_derivative(s-s0) for s in f.s]
-                            f.ddot_d = [path.compute_second_derivative(s-s0) for s in f.s]
-                            f.dddot_d = [path.compute_third_derivative(s-s0) for s in f.s]
-                            squared_jerk = sum(np.power(f.dddot_d, 2))
-                            C_lat = f.cd = self.kj * squared_jerk + self.kt * S + self.kd * di ** 2 # Compute longitudinal cost low speed
-                            # f.ctot = self.klat * squared_jerk + self.klong * squared_jerklong
-                            f.ctot = self.klat * C_lat + self.klong * C_long
-                            # Transform f.t into real time coordinates
-                            for i in range(len(f.t)):
-                                f.t[i] += self.t_initial
-                            frenet_paths.append(f)
+                        # if S>cfg.S_THRSH:
+                        path = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, S)
+                        f.d = [path.compute_pt(abs(s-s0)) for s in f.s]
+                        f.dot_d = [path.compute_first_derivative(abs(s-s0)) for s in f.s]
+                        f.ddot_d = [path.compute_second_derivative(abs(s-s0)) for s in f.s]
+                        f.dddot_d = [path.compute_third_derivative(abs(s-s0)) for s in f.s]
+                        squared_jerk = sum(np.power(f.dddot_d, 2))
+                        C_lat = f.cd = self.kj * squared_jerk + self.kt * S + self.kd * di ** 2 # Compute longitudinal cost low speed
+                        # f.ctot = self.klat * squared_jerk + self.klong * squared_jerklong
+                        f.ctot = self.klat * C_lat + self.klong * C_long
+                        # Transform f.t into real time coordinates
+                        for i in range(len(f.t)):
+                            f.t[i] += self.t_initial
+                        frenet_paths.append(f)
                     else: # high speed
                         path = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, tj)
                         f.d = [path.compute_pt(t) for t in f.t]
