@@ -1,37 +1,40 @@
+from motion import FrenetTrajectoryPlanner
+from plot import plot_longitudinal_paths_lst, plot_lateral_paths_lst, plot_lateral_paths_lst_ctot, plot_longitudinal_paths_lst_ctot, plot_following_paths_lst_ctot,plot_4_paths_lst,plot_xy_paths_lst_ctot
+from quintic_polynomial import QuinticPolynomial
+from utils import frenet_follow_target, frenet_target_ctot, frenet_cd_cv, frenet_ct, save_images,frenet_xy
+import numpy as np
 
-from motion import LateralTrajectoryPlanner
-from plot import plot_longitudinal_paths_lst, plot_longitudinal_paths, plot_lateral_paths_lst, plot_longitudinal_paths
 
-# initial state
-p = (3,0.3,0) 
-s = (0,2, -1.25)
+def main():
+    # initial state
+    p = (3,0.3,0) 
+    s = (0,2,-0.5)
+    s0_t = (1,2,0)
+    s1_t = (8,0,0)
+    Ts = 10
 
-# replanning instants
-Tn = [0, 2.5, 5]
+    # replanning instants
+    Tn = [0, 2.5, 5]
+    T = np.arange(0,5,0.5)
 
-# target velocity and delta s
-sd = 5
-si_interval = [(0,5.5,1),(1,7,1), (2,9,1)]
-# initialize the planner
-lateral_planner = LateralTrajectoryPlanner(p, t_initial=0, kj=0.01, kt=0.4, kd=1.0,
-                                            di_interval=(-2.2, 2.30, 0.55),
-                                            t_interval=(1.0, 6.2, 0.8), 
-                                            s0=s, si_interval= si_interval[0],
-                                            sd=sd, kdot_s = 1.0, k_long=1.0, k_lat=1.0)
+    s_target = frenet_follow_target(s0=s0_t, s1=s1_t, Ts=Ts)
 
-frenet_paths = []
+    # lateral e long
+    frenet_paths_cd_cv = frenet_cd_cv(p=p, s=s, Tn=Tn)
 
-for i,t in enumerate(Tn):
+    # ctot with s_target
+    frenet_paths_ctot_s = frenet_target_ctot(p=p, s=s, Tn=Tn, s_target=s_target)
+
+    # ctot xy replannig
+    frenet_paths_ctot = frenet_target_ctot(p=p, s=s, Tn=Tn)
     
-    if i > 0:
-        lateral_planner.replan(t, si_interval[i])
-    else:
-        lateral_planner.replan(t)
-    
-    print('d0: ', lateral_planner.p0, lateral_planner.t_initial)
-    print('s0: ', lateral_planner.s0, lateral_planner.t_initial)
-    frenet_paths.append(lateral_planner.paths)
-    #plot_longitudinal_paths(frenet_paths[i])
+    # ct with s_target
+    frenet_paths_ct = frenet_ct(p=p, s=s, Tn=Tn, s_target=s_target)
 
-plot_lateral_paths_lst(frenet_paths)
-plot_longitudinal_paths_lst(frenet_paths)
+    #frenet_xy_ctot = frenet_xy(p=p, s=s)
+    
+    plot_4_paths_lst(frenet_paths_cd_cv,frenet_paths_cd_cv, frenet_paths_ct, frenet_paths_ctot_s, target=s_target)
+    #plot_xy_paths_lst_ctot(frenet_xy_ctot)
+
+if __name__ == '__main__':
+    main()
