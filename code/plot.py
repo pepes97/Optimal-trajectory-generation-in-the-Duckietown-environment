@@ -254,3 +254,25 @@ def plot_following_paths_lst_ctot(path_lst: [[Frenet]], target: Frenet):
         plt.plot(min_path.t, min_path.s, '-g', linewidth=2)
         plt.plot(target.t, target.s, '-b', linewidth=2)
     plt.show()
+    
+def plot_following_paths_lst_ct(path_lst: [[Frenet]], target: Frenet):
+    max_ct = 1e6
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    # plt.plot(target.t, target.s, '-b', linewidth=2)
+    for plst in path_lst:
+        min_ct = max_ct
+        min_path = None
+        for path in plst:
+            if path.ct < min_ct:
+                min_ct = path.ct
+                min_path = path
+            color = 'k'
+            if path.ct > 30:
+                color = 'gray'
+            plt.plot(path.t, path.s, color, linewidth = 0.5)#c=cm.gnuplot(path.cv / 25))
+            plt.plot(path.t[0], path.s[0], "og")
+            plt.xlabel("t/s")
+            plt.ylabel("s/m")
+        plt.plot(min_path.t, min_path.s, '-g', linewidth=2)
+    plt.show()

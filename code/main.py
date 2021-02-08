@@ -1,6 +1,6 @@
 
 from motion import FrenetTrajectoryPlanner
-from plot import plot_longitudinal_paths_lst, plot_lateral_paths_lst, plot_lateral_paths_lst_ctot, plot_longitudinal_paths_lst_ctot, plot_following_paths_lst_ctot
+from plot import plot_longitudinal_paths_lst, plot_lateral_paths_lst, plot_lateral_paths_lst_ctot, plot_longitudinal_paths_lst_ctot, plot_following_paths_lst_ctot, plot_following_paths_lst_ct
 from quintic_polynomial import QuinticPolynomial
 from utils import frenet_follow_target
 
@@ -12,7 +12,7 @@ s1_t = (6,0,0)
 Ts = 10
 # initialize the planner
 s_target = frenet_follow_target(s0=s0_t, s1=s1_t, Ts=Ts)
-lateral_planner = FrenetTrajectoryPlanner(p0 = p, s0=s, s_target = s_target)# s_target = s1_t
+lateral_planner = FrenetTrajectoryPlanner(p0 = p, s0=s, s_target = s_target)
 
 # replanning instants
 Tn = [0, 2.5, 5]
