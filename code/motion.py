@@ -28,13 +28,15 @@ class FrenetTrajectoryPlanner:
         self.si_interval = (-cfg.D_D_S*cfg.N_S_SAMPLE,cfg.D_D_S*cfg.N_S_SAMPLE+cfg.D_D_S,cfg.D_D_S)
         self.dsi_interval = (-cfg.D_D_S*cfg.N_S_SAMPLE,cfg.D_D_S*cfg.N_S_SAMPLE+cfg.D_D_S,cfg.D_D_S) # Interval expressed as tuple (dsd - delta_dsi, dsd + delta_dsi, delta_s)
         self.paths = self.generate_range_polynomials(); # store current paths
-        self.opt_path_cd = min(self.paths, key=attrgetter('cd')); # store the best path for d
-        self.opt_path_cv = min(self.paths, key=attrgetter('cv')); # store the best path for s
+        self.opt_path_d = min(self.paths, key=attrgetter('cd')); # store the best path for d
+        self.opt_path_s = min(self.paths, key=attrgetter('cv')); # store the best path for s
         self.opt_path_tot = min(self.paths, key=attrgetter('ctot')); # store the best path for s
         if self.s_target != None:
             self.opt_path_ct = min(self.paths, key=attrgetter('ct')); # store the best path for s
 
-
+        # self.opt_path_cd = min(self.paths, key=attrgetter('cd')); # store the best path for d
+        # self.opt_path_cv = min(self.paths, key=attrgetter('cv')); # store the best path for s
+        
 
     def generate_range_polynomials(self) -> [Frenet]:
         """ Generates a range of posdsible polynomials paths, each with its associated cost """
@@ -125,12 +127,29 @@ class FrenetTrajectoryPlanner:
         else:
             return (opt_path.d[index], opt_path.dot_d[index], opt_path.ddot_d[index])
     
+    def replan_ct(self, time, replan_interval=None): # replan w.r.t opt_ct
+        self.p0 = self.optimal_at_time(time, self.opt_path_ct, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
+        self.s0 = self.optimal_at_time(time, self.opt_path_ct, "s") # Initial step in frenet-frame as tuple (s0, ds0)
+        self.t_initial = time
+        self.paths = self.generate_range_polynomials()
+        self.opt_path_ct = min(self.paths, key=attrgetter('ct'))
+
     def replan_ctot(self, time, replan_interval=None): # replan w.r.t opt_tot
         self.p0 = self.optimal_at_time(time, self.opt_path_tot, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
         self.s0 = self.optimal_at_time(time, self.opt_path_tot, "s") # Initial step in frenet-frame as tuple (s0, ds0)
+        # self.dsi_interval = (round(self.s0[1]-cfg.D_D_S*cfg.N_S_SAMPLE),round(self.s0[1]+cfg.D_D_S*cfg.N_S_SAMPLE)+cfg.D_D_S,cfg.D_D_S)
         self.t_initial = time
         self.paths = self.generate_range_polynomials()
         self.opt_path_tot = min(self.paths, key=attrgetter('ctot'))
+        
+    def replan_cd_cv(self, time, replan_interval=None): # replan w.r.t opt_d and opt_s
+        self.p0 = self.optimal_at_time(time, self.opt_path_d, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
+        self.s0 = self.optimal_at_time(time, self.opt_path_s, "s") # Initial step in frenet-frame as tuple (s0, ds0)
+        # self.dsi_interval = (round(self.s0[1]-cfg.D_D_S*cfg.N_S_SAMPLE),round(self.s0[1]+cfg.D_D_S*cfg.N_S_SAMPLE)+cfg.D_D_S,cfg.D_D_S)
+        self.t_initial = time
+        self.paths = self.generate_range_polynomials()
+        self.opt_path_d = min(self.paths, key=attrgetter('cd'))
+        self.opt_path_s = min(self.paths, key=attrgetter('cv'))
 
     def replan_cd(self, time, replan_interval=None): # replan w.r.t opt_d and opt_s
         self.p0 = self.optimal_at_time(time, self.opt_path_cd, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
@@ -145,11 +164,4 @@ class FrenetTrajectoryPlanner:
         self.t_initial = time
         self.paths = self.generate_range_polynomials()
         self.opt_path_cv = min(self.paths, key=attrgetter('cv'))
-        
-    def replan_ct(self, time, replan_interval=None): # replan w.r.t opt_d and opt_s
-        self.p0 = self.optimal_at_time(time, self.opt_path_ct, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
-        self.s0 = self.optimal_at_time(time, self.opt_path_ct, "s") # Initial step in frenet-frame as tuple (s0, ds0)
-        self.t_initial = time
-        self.paths = self.generate_range_polynomials()
-        self.opt_path_ct = min(self.paths, key=attrgetter('ct'))
-    
+       
