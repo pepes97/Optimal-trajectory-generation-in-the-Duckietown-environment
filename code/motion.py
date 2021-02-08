@@ -34,8 +34,8 @@ class FrenetTrajectoryPlanner:
         if self.s_target != None:
             self.opt_path_ct = min(self.paths, key=attrgetter('ct')); # store the best path for s
 
-        # self.opt_path_cd = min(self.paths, key=attrgetter('cd')); # store the best path for d
-        # self.opt_path_cv = min(self.paths, key=attrgetter('cv')); # store the best path for s
+        self.opt_path_cd = min(self.paths, key=attrgetter('cd')); # store the best path for d
+        self.opt_path_cv = min(self.paths, key=attrgetter('cv')); # store the best path for s
         
 
     def generate_range_polynomials(self) -> [Frenet]:
