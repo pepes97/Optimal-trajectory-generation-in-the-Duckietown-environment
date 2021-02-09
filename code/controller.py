@@ -174,13 +174,13 @@ import matplotlib.animation as animation
 
 def __test_control_2D_IOLin():
     p_start = np.array([0.0, 0.0])
-    dp_start = np.array([0.0, 0.0])
-    ddp_start = np.array([-2.0, 1.0])
-    p_end = np.array([10.0, 3.0])
-    dp_end = np.array([1.0, -1.0])
+    dp_start = np.array([5.0, 2.0])
+    ddp_start = np.array([3.0, 1.0])
+    p_end = np.array([10.0, 2.0])
+    dp_end = np.array([-2.0, -2.0])
     ddp_end = np.array([0.0, 0.5])
     t_start = 0.0
-    t_end = 20.0
+    t_end = 10.0
     t = np.arange(t_start, t_end, 0.1)
     LEN_SIMULATION = t.shape[0]
 
@@ -191,7 +191,7 @@ def __test_control_2D_IOLin():
     frenet_transform = FrenetTransform2D(trajectory, initial_guess=0.5)
     # Controller components
     #ctrl_b, ctrl_k1, ctrl_k2 = 0.5, 0.7, 5.0
-    ctrl_b, ctrl_k1, ctrl_k2 = 0.5, 13.0, 10.0
+    ctrl_b, ctrl_k1, ctrl_k2 = 0.5, 12.0, 9.0
     print('Using FrenetInputOutputLinearizationController')
     print(f'Controller parameters: b: {ctrl_b}\tk1: {ctrl_k1}\tk2: {ctrl_k2}')
     controller = FrenetInputOutputLinearizationController(ctrl_b, ctrl_k1, ctrl_k2)
@@ -217,7 +217,7 @@ def __test_control_2D_IOLin():
         target_pos = np.append(trajectory.compute_pt(t[i]), 0.0)
         target_pos = frenet_transform.transform(target_pos)
         dtarget_pos = np.append(trajectory.compute_first_derivative(t[i]), 0.0)
-        dtarget_pos = frenet_transform.transform(dtarget_pos)/6
+        dtarget_pos = 0 * frenet_transform.transform(dtarget_pos)
         u = controller.compute(fpose, curvature, target_pos, dtarget_pos)
         #print(f'robot: {p_robot}, target_pos: {target_pos}, curvature: {curvature}, u: {u}')
         #print(u)
