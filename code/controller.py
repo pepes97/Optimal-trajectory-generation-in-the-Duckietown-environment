@@ -175,13 +175,13 @@ import matplotlib.animation as animation
 def __test_control_2D_IOLin():
     p_start = np.array([0.0, 0.0])
     dp_start = np.array([0.0, 0.0])
-    ddp_start = np.array([-3.0, 0.0])
+    ddp_start = np.array([-2.0, 1.0])
     p_end = np.array([10.0, 3.0])
     dp_end = np.array([1.0, -1.0])
-    ddp_end = np.array([0.0, 0.0])
+    ddp_end = np.array([0.0, 0.5])
     t_start = 0.0
-    t_end = 10.0
-    t = np.arange(t_start, t_end, 0.05)
+    t_end = 20.0
+    t = np.arange(t_start, t_end, 0.1)
     LEN_SIMULATION = t.shape[0]
 
     trajectory = QuinticTrajectory2D(p_start, dp_start, ddp_start,
@@ -191,7 +191,7 @@ def __test_control_2D_IOLin():
     frenet_transform = FrenetTransform2D(trajectory, initial_guess=0.5)
     # Controller components
     #ctrl_b, ctrl_k1, ctrl_k2 = 0.5, 0.7, 5.0
-    ctrl_b, ctrl_k1, ctrl_k2 = 0.5, 5.0, 10.0
+    ctrl_b, ctrl_k1, ctrl_k2 = 0.5, 13.0, 10.0
     print('Using FrenetInputOutputLinearizationController')
     print(f'Controller parameters: b: {ctrl_b}\tk1: {ctrl_k1}\tk2: {ctrl_k2}')
     controller = FrenetInputOutputLinearizationController(ctrl_b, ctrl_k1, ctrl_k2)
@@ -206,6 +206,7 @@ def __test_control_2D_IOLin():
     fpose_vect = np.zeros((3, LEN_SIMULATION))
     tpose_vect = np.zeros(LEN_SIMULATION) # Target vector
     tfpose_vect = np.zeros((3, LEN_SIMULATION)) # Target in frenet frame
+    errf_vect = np.zeros((3, LEN_SIMULATION)) # Error in frenet frame
     p_robot = robot_position
     for i in range(LEN_SIMULATION):
         est_pose, _, _ = frenet_transform.estimatePosition(p_robot[0:2])
@@ -216,7 +217,7 @@ def __test_control_2D_IOLin():
         target_pos = np.append(trajectory.compute_pt(t[i]), 0.0)
         target_pos = frenet_transform.transform(target_pos)
         dtarget_pos = np.append(trajectory.compute_first_derivative(t[i]), 0.0)
-        dtarget_pos = frenet_transform.transform(dtarget_pos)
+        dtarget_pos = frenet_transform.transform(dtarget_pos)/6
         u = controller.compute(fpose, curvature, target_pos, dtarget_pos)
         #print(f'robot: {p_robot}, target_pos: {target_pos}, curvature: {curvature}, u: {u}')
         #print(u)
@@ -226,6 +227,7 @@ def __test_control_2D_IOLin():
         fpose_vect[:, i] = fpose.T
         est_pose_vect[i] = est_pose
         tfpose_vect[:, i] = target_pos
+        errf_vect[:, i] = target_pos - fpose
 
     # Plot section
     fig, axs = plt.subplots(2)
@@ -245,7 +247,7 @@ def __test_control_2D_IOLin():
     # Plot target position
     tgpoint = axs[0].scatter(path_vect[0, i], path_vect[1, i])
     # PLOT 1
-    tfline, = axs[1].plot(tfpose_vect[0, :], tfpose_vect[1, :])
+    tfline, = axs[1].plot(errf_vect[0, :], errf_vect[1, :])
     def animate(i):
         # Update robot pose
         rgline.set_xdata(gpose_vect[0, :i])
@@ -257,12 +259,12 @@ def __test_control_2D_IOLin():
         tgpnt = trajectory.compute_pt(t[i])
         tgpoint.set_offsets([tgpnt[0], tgpnt[1]])
         # Update target position in frenet
-        tfline.set_xdata(tfpose_vect[0, :i])
-        tfline.set_ydata(tfpose_vect[1, :i])
+        tfline.set_xdata(errf_vect[0, :i])
+        tfline.set_ydata(errf_vect[1, :i])
         return [rgline, rproj, tgpoint, tfline]
 
     ani = animation.FuncAnimation(
-        fig, animate, frames=t.shape[0], interval=100, repeat=False)
+        fig, animate, frames=t.shape[0], interval=40, repeat=True)
 
     plt.tight_layout()
     plt.show()

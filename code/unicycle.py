@@ -12,7 +12,7 @@ class Unicycle:
         self.p0 = p0
         self.p = self.p0
 
-    def step(self, u: np.ndarray, dt:float = 0.1):
+    def step(self, u: np.ndarray, dt:float = 0.1) -> np.array:
         """ Step the unicycle wrt global frame RF0 given the pair of control inputs
         u[0] : Tangential velocity control
         u[1] : Radial velocity control

@@ -176,8 +176,10 @@ class FrenetTransform2D(FrenetTransform):
         """
         path = self.path
         s = self.proj_estimate
+        vel_vect = path.compute_first_derivative(s)
         acc_vect = path.compute_second_derivative(s)
-        curvature = np.linalg.norm(acc_vect)
+        
+        curvature = (acc_vect[1] * vel_vect[0] - acc_vect[0] * vel_vect[1]) / (vel_vect[0]**2 + vel_vect[1]**2)
         return curvature
         
         
