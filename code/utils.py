@@ -59,13 +59,20 @@ class Target():
 
 
 def frenet_coordinates_xy(frenet_paths: Frenet, spline: Spline2D) -> Frenet:
+    max_interval_s = 0
     for list_frenet in frenet_paths:
         for f in list_frenet:
             for i in range(len(f.s)):
-                ix, iy = spline.calc_position(f.s[i])
+               if f.s[-1]-f.s[0] > max_interval_s:
+                   max_interval_s = f.s[-1]-f.s[0]
+    for list_frenet in frenet_paths:
+        for f in list_frenet:
+            for i in range(len(f.s)):
+                s = f.s[i]/(max_interval_s+1e-6)*(spline.s[-1]-spline.s[0]) # 1e-6 to avoid take exactly 1.0, spline is not defined for 1
+                ix, iy = spline.calc_position(s)
                 if ix ==None:
                     break
-                i_yaw = spline.calc_yaw(f.s[i])
+                i_yaw = spline.calc_yaw(s)
                 fx = ix + f.d[i] * math.cos(i_yaw + math.pi / 2.0)
                 fy = iy + f.d[i] * math.sin(i_yaw + math.pi / 2.0)
 
@@ -137,12 +144,12 @@ def frenet_xy(p:(float, float, float), s:(float, float, float)):
 
     frenet_paths = []
     frenet_paths.append(lateral_planner.paths)
-    wx = [-1.0,  5, 10, 12,15,]
-    wy = [-3.0, -4.5,-5.8, -6.2, -6.6]
+    wx = [-1.0,  25.5, 30.0, 40]
+    wy = [-3.0, -5.5, -4.0, -3]
     spline = Spline2D(wx, wy)
 
     frenet_paths = frenet_coordinates_xy(frenet_paths, spline)
-    return frenet_paths
+    return frenet_paths, spline
 
 def save_images(frenet_paths: Frenet, path, type_i, s_target = None):
     if type_i == "cv":

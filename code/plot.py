@@ -3,6 +3,7 @@ from matplotlib import cm
 from Frenet import Frenet
 import numpy as np
 import time
+from spline_planner import Spline2D
 
 """
     ********** SINGLE PLOT ************
@@ -160,7 +161,7 @@ def plot_following_paths_lst_ct(path_lst: [[Frenet]], target: Frenet, path_save:
         plt.savefig(path_save + time.strftime("%Y-%m-%d %H%M%S") + ".png")
     plt.show()
 
-def plot_xy_paths_lst_ctot(path_lst: [[Frenet]], path_save:str="", save:bool=False):
+def plot_xy_paths_lst_ctot(path_lst: [[Frenet]], sp: Spline2D, path_save:str="", save:bool=False):
     max_ctot = 1e6
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -179,6 +180,15 @@ def plot_xy_paths_lst_ctot(path_lst: [[Frenet]], path_save:str="", save:bool=Fal
             plt.ylim(-14,2.2)
             plt.title("x,y coordinates minimize Ctot")
         plt.plot(min_path.x, min_path.y, '-g', linewidth=2) 
+        s = list(np.arange(0, sp.s[-1], 0.05))
+        rx, ry, ryaw, rk = [], [], [], []
+        for i_s in s:
+            ix, iy = sp.calc_position(i_s)
+            rx.append(ix)
+            ry.append(iy)
+            ryaw.append(sp.calc_yaw(i_s))
+            rk.append(sp.calc_curvature(i_s))
+        plt.plot(rx, ry, '-b', linewidth=2) 
     if save:
         plt.savefig(path_save+ time.strftime("%Y-%m-%d %H%M%S") + ".png") 
     plt.show()

@@ -33,15 +33,51 @@ def main():
     frenet_paths_ctot_s = frenet_target_ctot(p=p, s=s, Tn=Tn, s_target=s_target)
 
     # ctot xy replannig
-    frenet_paths_ctot = frenet_target_ctot(p=p, s=s, Tn=Tn)
+    # frenet_paths_ctot = frenet_target_ctot(p=p, s=s, Tn=Tn)
     
     # ct with s_target
     frenet_paths_ct = frenet_ct(p=p, s=s, Tn=Tn, s_target=s_target)
 
-    #frenet_xy_ctot = frenet_xy(p=p, s=s)
+    frenet_xy_ctot, spline = frenet_xy(p=p, s=s)
     
     plot_4_paths_lst(frenet_paths_cd_cv,frenet_paths_cd_cv, frenet_paths_ct, frenet_paths_ctot_s, target=s_target)
-    #plot_xy_paths_lst_ctot(frenet_xy_ctot)
+    plot_xy_paths_lst_ctot(frenet_xy_ctot, spline)
 
 if __name__ == '__main__':
     main()
+
+# # from spline_planner import Spline2D
+# import matplotlib.pyplot as plt
+# import numpy as np
+# from quintic_polynomial import QuinticPolynomial
+
+# # x = [-3,20,30, 42]
+# # y = [-2,-8,-8, 2]
+
+# # sp = Spline2D(x, y)
+# # s = np.arange(0, sp.s[-1], 0.1)
+
+# # rx, ry, ryaw, rk = [], [], [], []
+# # for i_s in s:
+# #     ix, iy = sp.calc_position(i_s)
+# #     rx.append(ix)
+# #     ry.append(iy)
+# #     ryaw.append(sp.calc_yaw(i_s))
+# #     rk.append(sp.calc_curvature(i_s))
+# # xx = QuinticPolynomial(-3,0,0,42,0,0,6)
+# yy = QuinticPolynomial(-2,-0.5,0,2,1,0,45)
+# x = np.arange(0,45,0.05)
+# y = [yy.compute_pt(i) for i in x]
+# x -=3
+# flg, ax = plt.subplots(1)
+# plt.plot(x, y, "-r", label="input")
+# plt.grid(True)
+# x_ticks = np.arange(0, 42, 5)
+# y_ticks = np.arange(-14, 4, 2)
+# ax.set_xticks(x_ticks)
+# ax.set_yticks(y_ticks)
+# plt.axis("equal")
+# plt.xlabel("x[m]")
+# plt.ylabel("y[m]")
+# plt.legend()
+# plt.show()
