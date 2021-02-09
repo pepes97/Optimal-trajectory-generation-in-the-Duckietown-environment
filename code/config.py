@@ -28,3 +28,5 @@ K_S = 0.1
 K_DOT_S = 1.0
 K_LAT = 1.0
 K_LONG = 1.0
+
+TARGET_DIST = 1 #[m] distance from following target

@@ -1,7 +1,7 @@
 from motion import FrenetTrajectoryPlanner
 from plot import plot_longitudinal_paths_lst, plot_lateral_paths_lst, plot_lateral_paths_lst_ctot, plot_longitudinal_paths_lst_ctot, plot_following_paths_lst_ctot,plot_4_paths_lst,plot_xy_paths_lst_ctot
 from quintic_polynomial import QuinticPolynomial
-from utils import frenet_follow_target, frenet_target_ctot, frenet_cd_cv, frenet_ct, save_images,frenet_xy
+from utils import Target, frenet_target_ctot, frenet_cd_cv, frenet_ct, save_images,frenet_xy
 import numpy as np
 
 
@@ -17,8 +17,15 @@ def main():
     Tn = [0, 2.5, 5]
     T = np.arange(0,5,0.5)
 
-    s_target = frenet_follow_target(s0=s0_t, s1=s1_t, Ts=Ts)
+    s_target = Target(s0=s0_t, s1=s1_t, Ts=Ts).get_frenet_stop_target()
+    
+    # s0_tb = (3,2,0)
+    # s1_tb = (10,0,0)
+    
+    # s_target = Target(s0=s0_t, s1=s1_t, Ts=Ts).get_frenet_merge_target(Target(s0=s0_tb, s1=s1_tb, Ts=Ts))
 
+    # s_target = Target(s0=s0_t, s1=s1_t, Ts=Ts).get_frenet_follow_target(D0 = 2)
+    
     # lateral e long
     frenet_paths_cd_cv = frenet_cd_cv(p=p, s=s, Tn=Tn)
 
