@@ -6,6 +6,7 @@ Launcher for tests on the repository
 import logging
 import argparse
 from lib.tests import *
+from lib.utils import bcolors
 
 logger=logging.getLogger(__name__)
 
@@ -22,10 +23,10 @@ TEST_MAP = {
 }
 
 def handle_parser(args):
-    if args.test not in VALID_TEST_LST:
-        logging.error('The insterted test is not valid.')
-        print('Available tests are:')
-        for tstr in VALID_TEST_LST:
+    if args.test not in TEST_MAP.keys():
+        print(f'{bcolors.FAIL}The insterted test is not valid.{bcolors.ENDC}')
+        print(f'Available tests are:')
+        for tstr in TEST_MAP.keys():
             print(tstr)
         exit(0)
     # Setup logger
@@ -45,7 +46,10 @@ if __name__ == '__main__':
     handle_parser(args)
 
     # Execute test routine
-    print(f'Launching test for {args.test}')
+    print(f'{bcolors.OKGREEN}Launching test for {args.test}{bcolors.ENDC}')
     result = TEST_MAP[args.test]()
+    if result is not None:
+        # Process results
+        pass
     
     exit(0)

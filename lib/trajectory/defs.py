@@ -22,6 +22,9 @@ class DifferentiableFunction(ABC):
     def compute_third_derivative(self, t):
         pass
 
+    def compute_curvature(self, t):
+        pass
+
 class Trajectory:
     """ Abstract Trajectory class TBD
     """

@@ -68,3 +68,11 @@ class QuinticTrajectory2D(Trajectory, DifferentiableFunction):
         # Check time validity (TODO)
         return np.array([self.x_path.compute_third_derivative(t),
                          self.y_path.compute_third_derivative(t)])
+
+    def compute_curvature(self, t):
+        acc_vect = self.compute_second_derivative(t)
+        vel_vect = self.compute_first_derivative(t)
+        numer = acc_vect[1] * vel_vect[0] - acc_vect[0] * vel_vect[1]
+        denom = vel_vect[0]**2 + vel_vect[1]**2
+        return numer / denom
+        pass

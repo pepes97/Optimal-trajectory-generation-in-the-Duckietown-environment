@@ -6,6 +6,15 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+class SimData:
+    robot_pose = ('robot_pose', 3)
+    robot_frenet_pose = ('robot_frenet_pose', 3)
+    control    = ('control', 2)
+    trajectory_2d = ('trajectory', 2)
+    target_pos = ('target_pos', 2)
+    point = ('point', 2)
+    
+
 class SimulationDataStorage:
     """ Container for simulation data gathered throughout experiments
     """
@@ -18,17 +27,21 @@ class SimulationDataStorage:
         self.sim_length = t.shape[0]
         self.db = {}
 
-    def add_argument(self, id: str, dim: int):
-        """ Add a new argument inside the storage.
-        """
-        assert id not in self.db
-        assert dim > 0
-        logger.debug(f'Adding new entry {id} of dimensions ({dim}, {self.sim_length})')
-        if dim == 1:
-            self.db[id] = np.zeros(self.sim_length)
-        else:
-            self.db[id] = np.zeros((dim, self.sim_length))
-
+    def add_argument(self, *args, **kwds):
+        if len(args) == 1 and isinstance(args[0], tuple):
+            arg_tuple = args[0]
+            self.add_argument(arg_tuple[0], arg_tuple[1])
+        if len(args) == 2 and isinstance(args[0], str) and isinstance(args[1], int):
+            id = args[0]
+            dim = args[1]
+            assert id not in self.db
+            assert dim > 0
+            logger.debug(f'Adding new entry {id} of dimensions ({dim}, {self.sim_length})')
+            if dim == 1:
+                self.db[id] = np.zeros(self.sim_length)
+            else:
+                self.db[id] = np.zeros((dim, self.sim_length))
+    
     def set(self, id: str, data, idx: int):
         """ Set the idx-th value of id's storage
         """

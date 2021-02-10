@@ -2,4 +2,4 @@
 Logger package initializer
 """
 
-from .simulation_logger import SimulationDataStorage
+from .simulation_logger import SimulationDataStorage, SimData
