@@ -4,6 +4,7 @@
 
 import numpy as np
 import logging
+import json
 from .defs import DifferentiableFunction, Trajectory
 from .trajectory_1d import QuarticPolynomial, QuinticPolynomial
 

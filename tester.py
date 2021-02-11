@@ -19,7 +19,15 @@ logger=logging.getLogger(__name__)
 TEST_MAP = {
     'path_follower_2D' : test_path_follower_2D,
     'trajectory_track_2D' : test_trajectory_track_2D,
-    'simlogger' : test_simlogger
+    'simlogger' : test_simlogger,
+    'serializer' : test_serializer,
+}
+
+TEST_PRINT_MAP = {
+    'path_follower_2D' : plot_2d_simulation,
+    'trajectory_track_2D' : plot_2d_simulation,
+    'simlogger' : None,
+    'serializer' : None,
 }
 
 IMG_PATH = './images/'
@@ -34,6 +42,8 @@ def handle_parser(args):
     # Setup logger
     loglevel = args.log
     numeric_level = getattr(logging, loglevel.upper())
+    # Disable matplotlib logger
+    logging.getLogger('matplotlib').setLevel(logging.WARNING)
     if not isinstance(numeric_level, int):
         raise ValueError(f'Invalid log level: {loglevel}')
     logging.basicConfig(level=numeric_level)
@@ -60,9 +70,9 @@ if __name__ == '__main__':
             logger.warning('Store and load callbacks are not ready yet.')
             #print(f'{bcolors.OKGREEN}Storing results to {log_path}{bcolors.ENDC}')
             #result.save(log_path)
-        if args.print is True:
+        if args.print is True and TEST_PRINT_MAP[args.test] is not None:
             print(f'{bcolors.OKGREEN}Printing results{bcolors.ENDC}')
-            result_figure = plot_2d_simulation(result)
+            result_figure = TEST_PRINT_MAP[args.test](result)
             plt.show()
             # Store plot
             res_dir = os.path.join(os.path.join(os.getcwd(), IMG_PATH), datetime.datetime.now().strftime('%Y%m%d'))

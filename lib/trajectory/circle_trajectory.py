@@ -2,6 +2,7 @@
 """
 
 import numpy as np
+import json
 import logging
 from .defs import DifferentiableFunction, Trajectory
 

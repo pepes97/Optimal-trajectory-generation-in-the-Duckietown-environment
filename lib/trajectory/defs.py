@@ -3,6 +3,7 @@ Trajectory classes definitions
 """
 
 from abc import ABC, abstractmethod
+import json
 
 class DifferentiableFunction(ABC):
 
@@ -30,3 +31,7 @@ class Trajectory:
     """
     def __init__(self):
         pass
+
+    def toJSON(self):
+        pass
+        
