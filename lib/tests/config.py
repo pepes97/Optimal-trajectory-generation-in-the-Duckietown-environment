@@ -13,16 +13,16 @@ class DefaultSimulationParameters:
     dt     = 0.1
     robot_pose = np.array([0.0, 0.0, 0.0])
     p_start   = np.array([0.0, 0.0])
-    dp_start  = np.array([0.0, 0.0])
-    ddp_start = np.array([0.0, 0.0])
-    p_end   = np.array([0.0, 0.0])
-    dp_end  = np.array([0.0, 0.0])
-    ddp_end = np.array([0.0, 0.0])
+    dp_start  = np.array([2.0, -2.0])
+    ddp_start = np.array([-1.0, 1.0])
+    p_end   = np.array([10.0, 15.0])
+    dp_end  = np.array([-2.0, 2.0])
+    ddp_end = np.array([1.0, -1.0])
     # PD controller parameters
-    kp1     = 5.0
-    kp2     = 5.0
-    kd1     = 1.0
-    kd2     = 1.0
+    kp1     = 10.0
+    kp2     = 9.
+    kd1     = 0.5
+    kd2     = 0.5
     b       = 0.5
 
 

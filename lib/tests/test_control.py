@@ -59,15 +59,29 @@ def test_trajectory_track_2D() -> SimulationDataStorage:#TODO
 
         # Compute error and derror
         target_pos = trajectory.compute_pt(t_vect[i])
+        target_fpos = transformer.transform(target_pos)
         target_dpos = trajectory.compute_first_derivative(t_vect[i])
-        error = target_pos - robot_fpose[0:2]
-        derror = target_dpos - robot_fdp
+        target_fdpos = transformer.transform(target_dpos)
+        error = target_fpos - robot_fpose[0:2]
+        derror = target_fdpos - robot_fdp
+
+        logger.debug(f'error: {error}, derror: {derror}')
 
         # Get path curvature at estimate
         curvature = trajectory.compute_curvature(est_pt)
 
         # Compute control
         u = controller.compute(robot_fpose, error, derror, curvature)
-        
-        pass
-    pass
+
+        # Step the unicycle
+        robot_p, robot_dp = robot.step(u, dsp.dt)
+
+        # log data
+        data_storage.set('robot_pose', robot_p, i)
+        data_storage.set('robot_frenet_pose', robot_fpose, i)
+        data_storage.set('control', u, i)
+        data_storage.set('trajectory', target_pos, i)
+        data_storage.set('target_pos', target_fpos, i)
+        data_storage.set('error', error, i)
+        data_storage.set('derror', derror, i)
+    return data_storage

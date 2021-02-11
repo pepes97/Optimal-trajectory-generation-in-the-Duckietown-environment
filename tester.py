@@ -5,22 +5,24 @@ Launcher for tests on the repository
 
 import logging
 import argparse
+import datetime
+import os
+import errno
+from matplotlib import pyplot as plt
 from lib.tests import *
 from lib.utils import bcolors
+from lib.plotter import plot_2d_simulation
+
 
 logger=logging.getLogger(__name__)
-
-VALID_TEST_LST = [
-    'path_follower_2D',
-    'trajectory_track_2D',
-    'simlogger'
-]
 
 TEST_MAP = {
     'path_follower_2D' : test_path_follower_2D,
     'trajectory_track_2D' : test_trajectory_track_2D,
     'simlogger' : test_simlogger
 }
+
+IMG_PATH = './images/'
 
 def handle_parser(args):
     if args.test not in TEST_MAP.keys():
@@ -40,8 +42,10 @@ def handle_parser(args):
 if __name__ == '__main__':
     # CLI arg parser
     parser = argparse.ArgumentParser(description='Repository tester.')
-    parser.add_argument('--test', metavar='t', type=str, help='test name', required=True)
-    parser.add_argument('--log', metavar='l', type=str, help='logging level', default='WARNING')
+    parser.add_argument('--test', '-t', metavar='t', type=str, help='test name', required=True)
+    parser.add_argument('--log', '-l',  metavar='l', type=str, help='logging level', default='WARNING')
+    parser.add_argument('--store', '-s',  metavar='s', type=str, help='log path')
+    parser.add_argument('--print', '-p', help='Print flag', action='store_true')
     args = parser.parse_args()
     handle_parser(args)
 
@@ -50,6 +54,25 @@ if __name__ == '__main__':
     result = TEST_MAP[args.test]()
     if result is not None:
         # Process results
-        pass
+        # Store results
+        if args.store is not None:
+            log_path = args.store
+            logger.warning('Store and load callbacks are not ready yet.')
+            #print(f'{bcolors.OKGREEN}Storing results to {log_path}{bcolors.ENDC}')
+            #result.save(log_path)
+        if args.print is True:
+            print(f'{bcolors.OKGREEN}Printing results{bcolors.ENDC}')
+            result_figure = plot_2d_simulation(result)
+            plt.show()
+            # Store plot
+            res_dir = os.path.join(os.path.join(os.getcwd(), IMG_PATH), datetime.datetime.now().strftime('%Y%m%d'))
+            try:
+                os.makedirs(res_dir)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise RuntimeError
+            fig_path = os.path.join(res_dir, f'{args.test}.jpg')
+            print(f'{bcolors.OKGREEN}Storing plot in :{bcolors.ENDC}{fig_path} ')
+            result_figure.savefig(fig_path)
     
     exit(0)
