@@ -3,6 +3,7 @@
 
 import numpy as np
 import logging
+from .defs import DifferentiableFunction, Trajectory
 
 logger = logging.getLogger(__name__)
 
