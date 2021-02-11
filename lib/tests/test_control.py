@@ -12,6 +12,8 @@ from ..logger import SimulationDataStorage, SimData
 from ..trajectory import QuinticTrajectory2D
 from ..transform import FrenetGNTransform
 from ..controller import FrenetIOLController
+from ..trajectory import CircleTrajectory2D
+from ..trajectory import SplineTrajectory2D
 
 logger=logging.getLogger(__name__)
 
@@ -36,9 +38,20 @@ def test_trajectory_track_2D() -> SimulationDataStorage:#TODO
     data_storage.add_argument('error', 2)
     data_storage.add_argument('derror', 2)
     # Configure trajectory
-    trajectory = QuinticTrajectory2D(dsp.p_start, dsp.dp_start, dsp.ddp_start,
-                                     dsp.p_end, dsp.dp_end, dsp.ddp_end,
-                                     sim_config.t_start, dsp.t_end)
+
+    ## Quintic
+    # trajectory = QuinticTrajectory2D(dsp.p_start, dsp.dp_start, dsp.ddp_start,
+    #                                  dsp.p_end, dsp.dp_end, dsp.ddp_end,
+    #                                  sim_config.t_start, dsp.t_end)
+
+    ## Circle
+    #trajectory = CircleTrajectory2D(8,5,2)
+
+    ## Spline
+    x = [0.0, 2.5, 5.0, 7.5, -3.0, 2.7]
+    y = [0.7, -6, 5, -9.5, 0.0, 5]
+    trajectory = SplineTrajectory2D(x,y)
+    
     # Configure transformer
     transformer = FrenetGNTransform(trajectory)
 
@@ -47,6 +60,7 @@ def test_trajectory_track_2D() -> SimulationDataStorage:#TODO
 
     # Simulation loop
     robot_p = robot.p
+
     robot_dp = np.zeros(3)
     u = np.zeros(2)
     for i in range(sim_config.get_simulation_length()):

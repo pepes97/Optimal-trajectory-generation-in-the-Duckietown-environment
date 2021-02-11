@@ -11,7 +11,8 @@ import errno
 from matplotlib import pyplot as plt
 from lib.tests import *
 from lib.utils import bcolors
-from lib.plotter import plot_2d_simulation
+from lib.plotter import plot_2d_simulation, plot_2d_simulation_xy
+import time
 
 
 logger=logging.getLogger(__name__)
@@ -62,6 +63,8 @@ if __name__ == '__main__':
             #result.save(log_path)
         if args.print is True:
             print(f'{bcolors.OKGREEN}Printing results{bcolors.ENDC}')
+            # fig_xy = plot_2d_simulation_xy(result)
+            # plt.show()
             result_figure = plot_2d_simulation(result)
             plt.show()
             # Store plot
@@ -71,7 +74,7 @@ if __name__ == '__main__':
             except OSError as e:
                 if e.errno != errno.EEXIST:
                     raise RuntimeError
-            fig_path = os.path.join(res_dir, f'{args.test}.jpg')
+            fig_path = os.path.join(res_dir, f'{args.test}_'+time.strftime("%Y-%m-%d_%H-%M-%S") +'.jpg')
             print(f'{bcolors.OKGREEN}Storing plot in :{bcolors.ENDC}{fig_path} ')
             result_figure.savefig(fig_path)
     

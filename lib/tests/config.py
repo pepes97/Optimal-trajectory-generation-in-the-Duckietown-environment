@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class DefaultSimulationParameters:
     t_start = 0.0
-    t_end  = 10.0
+    t_end  = 50
     dt     = 0.1
     robot_pose = np.array([0.0, 0.0, 0.0])
     p_start   = np.array([0.0, 0.0])
@@ -19,11 +19,11 @@ class DefaultSimulationParameters:
     dp_end  = np.array([-2.0, 2.0])
     ddp_end = np.array([1.0, -1.0])
     # PD controller parameters
-    kp1     = 10.0
-    kp2     = 9.
+    kp1     = 2.0
+    kp2     = 2.
     kd1     = 0.5
     kd2     = 0.5
-    b       = 0.5
+    b       = 1.5
 
 
 class SimulationConfiguration:
