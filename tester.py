@@ -19,7 +19,6 @@ import time
 logger=logging.getLogger(__name__)
 
 TEST_MAP = {
-    'path_follower_2D' : test_path_follower_2D,
     'trajectory_track_2D' : test_trajectory_track_2D,
     'simlogger' : test_simlogger,
     'serializer' : test_serializer,
@@ -27,7 +26,6 @@ TEST_MAP = {
 }
 
 TEST_PRINT_MAP = {
-    'path_follower_2D' : plot_2d_simulation,
     'trajectory_track_2D' : plot_2d_simulation,
     'simlogger' : None,
     'serializer' : None,
