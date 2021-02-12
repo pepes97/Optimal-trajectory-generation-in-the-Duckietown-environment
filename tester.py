@@ -11,7 +11,9 @@ import errno
 from matplotlib import pyplot as plt
 from lib.tests import *
 from lib.utils import bcolors
-from lib.plotter import plot_2d_simulation
+from lib.plotter import plot_2d_simulation, plot_2d_simulation_xy
+from lib.serializer import Serializer
+import time
 
 
 logger=logging.getLogger(__name__)
@@ -21,6 +23,7 @@ TEST_MAP = {
     'trajectory_track_2D' : test_trajectory_track_2D,
     'simlogger' : test_simlogger,
     'serializer' : test_serializer,
+    'config_generator' : test_generate_configurations,
 }
 
 TEST_PRINT_MAP = {
@@ -28,6 +31,7 @@ TEST_PRINT_MAP = {
     'trajectory_track_2D' : plot_2d_simulation,
     'simlogger' : None,
     'serializer' : None,
+    'config_generator' : None,
 }
 
 IMG_PATH = './images/'
@@ -56,12 +60,26 @@ if __name__ == '__main__':
     parser.add_argument('--log', '-l',  metavar='l', type=str, help='logging level', default='WARNING')
     parser.add_argument('--store', '-s',  metavar='s', type=str, help='log path')
     parser.add_argument('--print', '-p', help='Print flag', action='store_true')
-    args = parser.parse_args()
+    parser.add_argument('--config', '-c', type=str, help='Simulation configuration file')
+    try:
+        args = parser.parse_args()
+    except:
+        parser.print_help()
+        exit(0)
     handle_parser(args)
 
+    # If configuraiton file is passed, extract it
+    config_obj = None
+    if args.config is not None:
+        try:
+            print(f'{bcolors.OKGREEN}Loading configuration file:{bcolors.ENDC}{args.test}')
+            config_obj = Serializer('jsonpickle').deserialize(args.config)
+        except:
+            logger.error(f'Could not load {args.config} configuration file')
     # Execute test routine
     print(f'{bcolors.OKGREEN}Launching test for {args.test}{bcolors.ENDC}')
-    result = TEST_MAP[args.test]()
+    config_args = config_obj.__dict__ if config_obj is not None else None
+    result = TEST_MAP[args.test](**config_args)
     if result is not None:
         # Process results
         # Store results
@@ -81,7 +99,7 @@ if __name__ == '__main__':
             except OSError as e:
                 if e.errno != errno.EEXIST:
                     raise RuntimeError
-            fig_path = os.path.join(res_dir, f'{args.test}.jpg')
+            fig_path = os.path.join(res_dir, f'{args.test}_'+time.strftime("%Y-%m-%d_%H-%M-%S") +'.jpg')
             print(f'{bcolors.OKGREEN}Storing plot in :{bcolors.ENDC}{fig_path} ')
             result_figure.savefig(fig_path)
     

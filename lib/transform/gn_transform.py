@@ -10,15 +10,15 @@ logger = logging.getLogger(__name__)
 
 class FrenetGNTransform(FrenetTransform):
 
-    def __init__(self, trajectory: DifferentiableFunction, initial_guess: float=0.5, max_iter: int=10):
-        self.trajectory = trajectory
+    def __init__(self, initial_guess: float=0.5, max_iter: int=10):
         self.estimate = initial_guess
         self.max_iter = max_iter
         self.robot_pose = None
     
-    def estimatePosition(self, p: np.array):
+    def estimatePosition(self, trajectory: DifferentiableFunction, p: np.array):
         """ Estimate the position of the orthogonal projection of p onto the trajectory
         """
+        self.trajectory = trajectory
         def local_frame() -> (np.ndarray, np.array, float):
             """ Returns local frame parameters
             

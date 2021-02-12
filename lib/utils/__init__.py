@@ -3,5 +3,4 @@ Utils package initializer
 """
 
 from .cli_utils import bcolors
-from .trajectory_loader import load_trajectory_configuration, save_trajectory_configuration
  

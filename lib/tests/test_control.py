@@ -9,10 +9,9 @@ from .config import SimulationConfiguration
 from .config import DefaultSimulationParameters as dsp
 
 from ..logger import SimulationDataStorage, SimData
-from ..trajectory import QuinticTrajectory2D
+from ..trajectory import QuinticTrajectory2D, CircleTrajectory2D, SplineTrajectory2D
 from ..transform import FrenetGNTransform
 from ..controller import FrenetIOLController
-from ..utils import save_trajectory_configuration
 
 logger=logging.getLogger(__name__)
 
@@ -54,11 +53,22 @@ def test_circle_track_2D() -> SimulationDataStorage:
     data_storage.add_argument('error', 2)
     data_storage.add_argument('derror', 2)
     # Configure trajectory
-    trajectory = QuinticTrajectory2D(dsp.p_start, dsp.dp_start, dsp.ddp_start,
-                                     dsp.p_end, dsp.dp_end, dsp.ddp_end,
-                                     sim_config.t_start, dsp.t_end)
+
+    ## Quintic
+    # trajectory = QuinticTrajectory2D(dsp.p_start, dsp.dp_start, dsp.ddp_start,
+    #                                  dsp.p_end, dsp.dp_end, dsp.ddp_end,
+    #                                  sim_config.t_start, dsp.t_end)
+
+    ## Circle
+    #trajectory = CircleTrajectory2D(8,5,2)
+
+    ## Spline
+    x = [0.0, 2.5, 5.0, 7.5, -3.0, 2.7]
+    y = [0.7, -6, 5, -9.5, 0.0, 5]
+    trajectory = SplineTrajectory2D(x,y)
+    
     # Configure transformer
-    transformer = FrenetGNTransform(trajectory)
+    transformer = FrenetGNTransform()
 
     # Configure controller
     controller = FrenetIOLController(dsp.b, dsp.kp1, dsp.kp2, dsp.kd1, dsp.kd2)
@@ -69,11 +79,12 @@ def _simulate_experiment(sim_config, data_storage, trajectory, robot, transforme
     # Simulation loop
     t_vect = sim_config.get_time_vect()
     robot_p = robot.p
+
     robot_dp = np.zeros(3)
     u = np.zeros(2)
     for i in range(sim_config.get_simulation_length()):
         # Estimate frenet frame
-        est_pt = transformer.estimatePosition(robot_p)
+        est_pt = transformer.estimatePosition(trajectory, robot_p)
         # Robot pose in frenet
         robot_fpose = transformer.transform(robot_p)
         # Robot velocity in frenet (need only p_dot and d_dot)
@@ -104,4 +115,23 @@ def _simulate_experiment(sim_config, data_storage, trajectory, robot, transforme
         data_storage.set('target_pos', target_fpos, i)
         data_storage.set('error', error, i)
         data_storage.set('derror', derror, i)
+    return data_storage
+
+
+def test_trajectory_track_2D(*args, **kwargs):
+    sim_config = SimulationConfiguration(**kwargs)
+    # Extract key objects from configuration object
+    t_vect, robot, trajectory, transformer, controller = sim_config.get_elements()
+    # Configure SimulationDataStorage
+    data_storage = SimulationDataStorage(t_vect)
+    data_storage.add_argument(SimData.robot_pose)
+    data_storage.add_argument(SimData.robot_frenet_pose)
+    data_storage.add_argument(SimData.control)
+    data_storage.add_argument(SimData.trajectory_2d)
+    data_storage.add_argument(SimData.target_pos)
+    data_storage.add_argument('error', 2)
+    data_storage.add_argument('derror', 2)
+
+    data_storage = _simulate_experiment(sim_config, data_storage, trajectory,
+                                        robot, transformer, controller)
     return data_storage

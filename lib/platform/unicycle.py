@@ -4,12 +4,13 @@
 import numpy as np
 
 class Unicycle:
-    def __init__(self, p0: np.array):
+    def __init__(self):
         """ Generates an unicycle at coordinates p0 wrt global frame RF0
         """
-        assert p0.shape == (3,)
-        self.p0 = p0
-        self.p = self.p0
+        self.p = np.array([0.0, 0.0, 0.0])
+
+    def set_initial_pose(self, p0: np.array):
+        self.p = p0
 
     def step(self, u: np.array, dt:float = 0.1) -> (np.array, np.array):
         """ Step the unicycle wrt global frame RF0 given the pair of control inputs
