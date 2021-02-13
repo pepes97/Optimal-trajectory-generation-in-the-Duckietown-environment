@@ -80,11 +80,10 @@ def frenet_coordinates_xy(frenet_paths: Frenet, spline: Spline2D) -> Frenet:
                 f.y.append(fy)
     return frenet_paths
 
-
-def frenet_target_ctot(p:(float, float, float), s:(float, float, float), Tn:float, s_target: Frenet = None)-> Frenet:
+def frenet_target_ctot(t0: float, p:(float, float, float), s:(float, float, float), Tn:float, s_target: Frenet = None)-> Frenet:
 
     # initialize the planner
-    lateral_planner = FrenetTrajectoryPlanner(p0 = p, s0=s, s_target = s_target)# s_target = s1_t
+    lateral_planner = FrenetTrajectoryPlanner(t0 = t0, p0 = p, s0=s, s_target = s_target)# s_target = s1_t
 
     frenet_paths = []
 
@@ -104,10 +103,10 @@ def frenet_target_ctot(p:(float, float, float), s:(float, float, float), Tn:floa
 
     return frenet_paths
 
-def frenet_cd_cv(p:(float, float, float), s:(float, float, float), Tn:float) -> Frenet:
+def frenet_cd_cv(t0: float, p:(float, float, float), s:(float, float, float), Tn:float) -> Frenet:
 
     # initialize the planner
-    lateral_planner = FrenetTrajectoryPlanner(p0 = p, s0=s)
+    lateral_planner = FrenetTrajectoryPlanner(t0 = t0, p0 = p, s0=s)
 
     frenet_paths = []
 
@@ -120,8 +119,8 @@ def frenet_cd_cv(p:(float, float, float), s:(float, float, float), Tn:float) -> 
 
     return frenet_paths
 
-def frenet_ct(p:(float, float, float), s:(float, float, float), Tn:float, s_target: Frenet) -> Frenet:
-    lateral_planner = FrenetTrajectoryPlanner(p0 = p, s0=s, s_target = s_target)
+def frenet_ct(t0: float, p:(float, float, float), s:(float, float, float), Tn:float, s_target: Frenet) -> Frenet:
+    lateral_planner = FrenetTrajectoryPlanner(t0 = t0, p0 = p, s0=s, s_target = s_target)
 
     frenet_paths = []
 
@@ -136,11 +135,11 @@ def frenet_ct(p:(float, float, float), s:(float, float, float), Tn:float, s_targ
     return frenet_paths
 
 
-def frenet_xy(p:(float, float, float), s:(float, float, float)):
+def frenet_xy(t0: float, p:(float, float, float), s:(float, float, float)):
     # cfg.MIN_T = 3.0
     # cfg.MAX_T = 6.0
     # cfg.DT = 0.001
-    lateral_planner = FrenetTrajectoryPlanner(p0 = p, s0=s)
+    lateral_planner = FrenetTrajectoryPlanner(t0 = t0, p0 = p, s0=s)
 
     frenet_paths = []
     frenet_paths.append(lateral_planner.paths)

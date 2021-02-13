@@ -9,7 +9,8 @@ import config as cfg
 
 
 class FrenetTrajectoryPlanner:
-    def __init__(self, p0: (float, float, float), s0: (float, float, float), s_target: Frenet = None):
+    def __init__(self, t0: (float), p0: (float, float, float), s0: (float, float, float), dd: float = 0, dsd: float = cfg.DES_SPEED, s_target: Frenet = None):
+        assert abs(dd)<=cfg.MAX_ROAD_WIDTH, 'desired offset must be into road limits'
         self.delta_t = cfg.GLOBAL_D_T # planner sampling interval
         self.s0 = s0
         self.p0 = p0 # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
@@ -21,12 +22,13 @@ class FrenetTrajectoryPlanner:
         self.kdots = cfg.K_DOT_S
         self.klong = cfg.K_LONG
         self.klat = cfg.K_LAT
-        self.dsd = cfg.DES_SPEED
-        self.t_initial = cfg.T_0
+        self.dd = dd
+        self.dsd = cfg.DES_SPEED #desired speed
+        self.t_initial = t0
         self.di_interval = (-cfg.MAX_ROAD_WIDTH,cfg.MAX_ROAD_WIDTH,cfg.D_ROAD_W) # Interval expressed as tuple (D_min, D_max, delta_d)
         self.t_interval = (cfg.MIN_T,cfg.MAX_T,cfg.D_T) # Interval expressed as tuple (T_min, T_max, delta_t)
-        self.si_interval = (-cfg.D_D_S*cfg.N_S_SAMPLE,cfg.D_D_S*cfg.N_S_SAMPLE+cfg.D_D_S,cfg.D_D_S)
-        self.dsi_interval = (-cfg.D_D_S*cfg.N_S_SAMPLE,cfg.D_D_S*cfg.N_S_SAMPLE+cfg.D_D_S,cfg.D_D_S) # Interval expressed as tuple (dsd - delta_dsi, dsd + delta_dsi, delta_s)
+        self.si_interval = (round(-cfg.D_D_S*cfg.N_S_SAMPLE),round(+cfg.D_D_S*cfg.N_S_SAMPLE+cfg.D_D_S),cfg.D_D_S)
+        self.dsi_interval = (round(self.s0[1]-cfg.D_D_S*cfg.N_S_SAMPLE),round(self.s0[1]+cfg.D_D_S*cfg.N_S_SAMPLE+cfg.D_D_S),cfg.D_D_S) # Interval expressed as tuple (dsd - delta_dsi, dsd + delta_dsi, delta_s)
         self.paths = self.generate_range_polynomials(); # store current paths
         self.opt_path_d = min(self.paths, key=attrgetter('cd')); # store the best path for d
         self.opt_path_s = min(self.paths, key=attrgetter('cv')); # store the best path for s
@@ -94,7 +96,7 @@ class FrenetTrajectoryPlanner:
                         f.ddot_d = [path.compute_second_derivative(abs(s-s0)) for s in f.s]
                         f.dddot_d = [path.compute_third_derivative(abs(s-s0)) for s in f.s]
                         squared_jerk = sum(np.power(f.dddot_d, 2))
-                        C_lat = f.cd = self.kj * squared_jerk + self.kt * S + self.kd * di ** 2 # Compute longitudinal cost low speed
+                        C_lat = f.cd = self.kj * squared_jerk + self.kt * S + self.kd * (di-self.dd) ** 2 # Compute longitudinal cost low speed
                         f.ctot = self.klat * C_lat + self.klong * C_long
                         # Transform f.t into real time coordinates
                         for i in range(len(f.t)):
@@ -107,7 +109,7 @@ class FrenetTrajectoryPlanner:
                         f.ddot_d = [path.compute_second_derivative(t) for t in f.t]
                         f.dddot_d = [path.compute_third_derivative(t) for t in f.t]
                         squared_jerk = sum(np.power(f.dddot_d, 2))
-                        C_lat = f.cd = self.kj * squared_jerk + self.kt * tj + self.kd * di ** 2 # Compute longitudinal cost
+                        C_lat = f.cd = self.kj * squared_jerk + self.kt * tj + self.kd * (di-self.dd) ** 2 # Compute longitudinal cost
                         f.ctot = self.klat * C_lat + self.klong * C_long
                         # Transform f.t into real time coordinates
                         for i in range(len(f.t)):
@@ -117,8 +119,10 @@ class FrenetTrajectoryPlanner:
 
     def optimal_at_time(self, time, opt_path, type_path) -> (float, float, float):
         if time <= opt_path.t[0]:
+            print('Warning: requested time is out of optimal path time interval, increase the query time')
             index = 0
         elif time >= opt_path.t[-1]:
+            print('Warning: requested time is out of optimal path time interval, reduce the query time')
             index = -1
         else:
             index = round((time - opt_path.t[0])/self.delta_t)
@@ -126,15 +130,17 @@ class FrenetTrajectoryPlanner:
             return (opt_path.s[index], opt_path.dot_s[index], opt_path.ddot_s[index])
         else:
             return (opt_path.d[index], opt_path.dot_d[index], opt_path.ddot_d[index])
-    
-    def replan_ct(self, time, replan_interval=None): # replan w.r.t opt_ct
+
+    def replan_ct(self, time: float, s_target: Frenet = None): # replan w.r.t opt_ct
         self.p0 = self.optimal_at_time(time, self.opt_path_ct, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
         self.s0 = self.optimal_at_time(time, self.opt_path_ct, "s") # Initial step in frenet-frame as tuple (s0, ds0)
         self.t_initial = time
+        if s_target != None:
+            self.s_target = s_target
         self.paths = self.generate_range_polynomials()
         self.opt_path_ct = min(self.paths, key=attrgetter('ct'))
 
-    def replan_ctot(self, time, replan_interval=None): # replan w.r.t opt_tot
+    def replan_ctot(self, time: float): # replan w.r.t opt_tot
         self.p0 = self.optimal_at_time(time, self.opt_path_tot, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
         self.s0 = self.optimal_at_time(time, self.opt_path_tot, "s") # Initial step in frenet-frame as tuple (s0, ds0)
         # self.dsi_interval = (round(self.s0[1]-cfg.D_D_S*cfg.N_S_SAMPLE),round(self.s0[1]+cfg.D_D_S*cfg.N_S_SAMPLE)+cfg.D_D_S,cfg.D_D_S)
@@ -142,7 +148,7 @@ class FrenetTrajectoryPlanner:
         self.paths = self.generate_range_polynomials()
         self.opt_path_tot = min(self.paths, key=attrgetter('ctot'))
         
-    def replan_cd_cv(self, time, replan_interval=None): # replan w.r.t opt_d and opt_s
+    def replan_cd_cv(self, time: float): # replan w.r.t opt_d and opt_s
         self.p0 = self.optimal_at_time(time, self.opt_path_d, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
         self.s0 = self.optimal_at_time(time, self.opt_path_s, "s") # Initial step in frenet-frame as tuple (s0, ds0)
         # self.dsi_interval = (round(self.s0[1]-cfg.D_D_S*cfg.N_S_SAMPLE),round(self.s0[1]+cfg.D_D_S*cfg.N_S_SAMPLE)+cfg.D_D_S,cfg.D_D_S)
@@ -151,17 +157,15 @@ class FrenetTrajectoryPlanner:
         self.opt_path_d = min(self.paths, key=attrgetter('cd'))
         self.opt_path_s = min(self.paths, key=attrgetter('cv'))
 
-    def replan_cd(self, time, replan_interval=None): # replan w.r.t opt_d and opt_s
-        self.p0 = self.optimal_at_time(time, self.opt_path_cd, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
-        self.s0 = self.optimal_at_time(time, self.opt_path_cd, "s") # Initial step in frenet-frame as tuple (s0, ds0)
-        self.t_initial = time
-        self.paths = self.generate_range_polynomials()
-        self.opt_path_cd = min(self.paths, key=attrgetter('cd'))
-  
-    def replan_cv(self, time, replan_interval=None): # replan w.r.t opt_d and opt_s
-        self.p0 = self.optimal_at_time(time, self.opt_path_cv, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
-        self.s0 = self.optimal_at_time(time, self.opt_path_cv, "s") # Initial step in frenet-frame as tuple (s0, ds0)
-        self.t_initial = time
-        self.paths = self.generate_range_polynomials()
-        self.opt_path_cv = min(self.paths, key=attrgetter('cv'))
-       
+    def replanner(self, time:float, dd: float = None, dsd: float = None, s_target: Frenet = None):
+        # in order of priority
+        if s_target != None: # follow
+            self.s_target = s_target
+        else:
+            if dd != None: # collision
+                self.dd = dd
+            if dsd != None: # velocity keeping
+                self.dsd = dsd
+        self.replan_ctot(time=time)
+        
+        return self.p0[0], self.s0[0], self.opt_path_tot
