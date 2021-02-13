@@ -367,7 +367,11 @@ def plot_unicycle_evolution_2D_animated(gpose, fpose, est_pose, path, t):
     axs[1].axis('equal')
     plt.tight_layout()
     plt.show()
-    ani.save('evol2D.gif')
+    #ani.save('evol2D.gif')
+    
+    
+    
+    
             
 def plot_longitudinal_paths_lst(path_lst: [[Frenet]]):
     max_cv = 1e6

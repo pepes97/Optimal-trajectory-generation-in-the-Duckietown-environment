@@ -3,6 +3,7 @@
 
 import numpy as np
 from diff_function import DifferentiableFunction
+import logging
 
 
 class FrenetTransform():
@@ -141,7 +142,7 @@ class FrenetTransform2D(FrenetTransform):
         p_robot_distance = np.linalg.norm(p_robot_vect)
         p_robot_vect /= p_robot_distance
         if np.dot(radial_vector, p_robot_vect) > radial_threshold:
-            print(f'Warning: Frenet radial vector is far from true distance vector')
+            logging.debug('Frenet radial vector is far from true distance vector')
 
         self.theta_r = theta_r
         self.R_transform = R
@@ -169,6 +170,17 @@ class FrenetTransform2D(FrenetTransform):
         p_f = np.matmul(R.T, r_p) - np.matmul(R.T, t)
         t_f = r_t - self.theta_r
         return np.array([p_f[0], p_f[1], t_f])
+
+    def computeCurvature(self) -> float:
+        """Compute the curvature of the path at the current estimate
+        """
+        path = self.path
+        s = self.proj_estimate
+        vel_vect = path.compute_first_derivative(s)
+        acc_vect = path.compute_second_derivative(s)
+        
+        curvature = (acc_vect[1] * vel_vect[0] - acc_vect[0] * vel_vect[1]) / (vel_vect[0]**2 + vel_vect[1]**2)
+        return curvature
         
         
 
