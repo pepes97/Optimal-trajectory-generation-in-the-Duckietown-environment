@@ -74,3 +74,19 @@ def plot_2d_simulation_xy(data: SimulationDataStorage) -> plt.Figure:
     ax0.plot(target_traj[0, :], target_traj[1, :], label='Path')
     ax0.plot(robot_traj[0, :], robot_traj[1, :], label='Robot path')
     return fig
+
+def plot_2d_simulation_bot_xy(data: SimulationDataStorage) -> plt.Figure:
+    fig, ax0 = plt.subplots()
+    t = data.t
+    # Plot on the first row, the target and robot trajectories
+    ax0.set_title('Global view')
+    ax0.set_xlabel('x')
+    ax0.set_ylabel('y')
+    target_traj = data.get(SimData.trajectory_2d)
+    bot0_traj   = data.get(SimData.bot0_pose)
+    bot1_traj   =  data.get(SimData.bot1_pose)
+    ax0.plot(target_traj[0, :], target_traj[1, :], label='Path')
+    ax0.plot(bot0_traj[0, :], bot0_traj[1, :], label='bot0 path')
+    ax0.plot(bot1_traj[0, :], bot1_traj[1, :], label='bot1 path')
+    plt.legend()
+    return fig

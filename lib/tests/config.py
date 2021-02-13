@@ -27,6 +27,9 @@ class DefaultSimulationParameters:
     kd1     = 0.5
     kd2     = 0.5
     b       = 1.5
+    pf_k2   = 40
+    pf_k3   = 1.5
+    pf_v    = 0.5
 
 # Alias
 dsp = DefaultSimulationParameters

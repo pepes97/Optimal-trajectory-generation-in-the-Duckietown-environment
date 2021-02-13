@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 
 class SimData:
     robot_pose = ('robot_pose', 3)
+    bot0_pose = ('bot0_pose', 3)
+    bot1_pose = ('bot1_pose', 3)
+    bot2_pose = ('bot2_pose', 3)
+    bot3_pose = ('bot3_pose', 3)
     robot_frenet_pose = ('robot_frenet_pose', 3)
     control    = ('control', 2)
     trajectory_2d = ('trajectory', 2)
@@ -59,7 +63,7 @@ class SimulationDataStorage:
         if container.shape == self.t.shape:
             container[idx] = data
         else:
-            container[:, idx] = data
+            container[:, idx] = data        
 
     def get(self, *args, **kwds):
         """ Returns the storage of id

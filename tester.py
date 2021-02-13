@@ -11,7 +11,7 @@ import errno
 from matplotlib import pyplot as plt
 from lib.tests import *
 from lib.utils import bcolors
-from lib.plotter import plot_2d_simulation, plot_2d_simulation_xy
+from lib.plotter import *
 from lib.serializer import Serializer
 import time
 
@@ -23,6 +23,7 @@ TEST_MAP = {
     'simlogger' : test_simlogger,
     'serializer' : test_serializer,
     'config_generator' : test_generate_configurations,
+    'bot' : test_bot,
 }
 
 TEST_PRINT_MAP = {
@@ -30,6 +31,7 @@ TEST_PRINT_MAP = {
     'simlogger' : None,
     'serializer' : None,
     'config_generator' : None,
+    'bot' : plot_2d_simulation_bot_xy
 }
 
 IMG_PATH = './images/'
@@ -37,9 +39,9 @@ IMG_PATH = './images/'
 def handle_parser(args):
     if args.test not in TEST_MAP.keys():
         print(f'{bcolors.FAIL}The insterted test is not valid.{bcolors.ENDC}')
-        print(f'Available tests are:')
+        print(f'available tests are:')
         for tstr in TEST_MAP.keys():
-            print(tstr)
+            print(f'\t{tstr}')
         exit(0)
     # Setup logger
     loglevel = args.log
@@ -62,7 +64,9 @@ if __name__ == '__main__':
     try:
         args = parser.parse_args()
     except:
-        parser.print_help()
+        print(f'available tests are:')
+        for tstr in TEST_MAP.keys():
+            print(f'\t{tstr}')
         exit(0)
     handle_parser(args)
 
@@ -77,7 +81,10 @@ if __name__ == '__main__':
     # Execute test routine
     print(f'{bcolors.OKGREEN}Launching test for {args.test}{bcolors.ENDC}')
     config_args = config_obj.__dict__ if config_obj is not None else None
-    result = TEST_MAP[args.test](**config_args)
+    if config_args is None:
+        result = TEST_MAP[args.test]()
+    else:
+        result = TEST_MAP[args.test](**config_args)
     if result is not None:
         # Process results
         # Store results

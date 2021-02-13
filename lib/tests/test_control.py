@@ -15,12 +15,8 @@ from ..controller import FrenetIOLController
 
 logger=logging.getLogger(__name__)
 
-def test_path_follower_2D() -> SimulationDataStorage:#TODO
-    logger.error('Function not implemented')
-    pass
-
-def test_trajectory_track_2D() -> SimulationDataStorage:#TODO
-    sim_config = SimulationConfiguration()
+def test_trajectory_track_2D(*args, **kwargs):
+    sim_config = SimulationConfiguration(**kwargs)
     # Extract key objects from configuration object
     t_vect, robot, trajectory, transformer, controller = sim_config.get_elements()
     # Configure SimulationDataStorage
@@ -33,46 +29,8 @@ def test_trajectory_track_2D() -> SimulationDataStorage:#TODO
     data_storage.add_argument('error', 2)
     data_storage.add_argument('derror', 2)
 
-    data_storage = _simulate_experiment(sim_config, data_storage, trajectory, robot, transformer, controller)
-    return data_storage
-
-def test_circle_track_2D() -> SimulationDataStorage:
-    sim_config = SimulationConfiguration(dsp.t_start,
-                                         dsp.t_end,
-                                         dsp.dt,
-                                         dsp.robot_pose)
-    t_vect = sim_config.get_time_vect()
-    robot  = sim_config.get_robot()
-    # Configure SimulationDataStorage
-    data_storage = SimulationDataStorage(t_vect)
-    data_storage.add_argument(SimData.robot_pose)
-    data_storage.add_argument(SimData.robot_frenet_pose)
-    data_storage.add_argument(SimData.control)
-    data_storage.add_argument(SimData.trajectory_2d)
-    data_storage.add_argument(SimData.target_pos)
-    data_storage.add_argument('error', 2)
-    data_storage.add_argument('derror', 2)
-    # Configure trajectory
-
-    ## Quintic
-    # trajectory = QuinticTrajectory2D(dsp.p_start, dsp.dp_start, dsp.ddp_start,
-    #                                  dsp.p_end, dsp.dp_end, dsp.ddp_end,
-    #                                  sim_config.t_start, dsp.t_end)
-
-    ## Circle
-    #trajectory = CircleTrajectory2D(8,5,2)
-
-    ## Spline
-    x = [0.0, 2.5, 5.0, 7.5, -3.0, 2.7]
-    y = [0.7, -6, 5, -9.5, 0.0, 5]
-    trajectory = SplineTrajectory2D(x,y)
-    
-    # Configure transformer
-    transformer = FrenetGNTransform()
-
-    # Configure controller
-    controller = FrenetIOLController(dsp.b, dsp.kp1, dsp.kp2, dsp.kd1, dsp.kd2)
-    data_storage = _simulate_experiment(sim_config, data_storage, trajectory, robot, transformer, controller)
+    data_storage = _simulate_experiment(sim_config, data_storage, trajectory,
+                                        robot, transformer, controller)
     return data_storage
 
 def _simulate_experiment(sim_config, data_storage, trajectory, robot, transformer, controller):
@@ -115,23 +73,4 @@ def _simulate_experiment(sim_config, data_storage, trajectory, robot, transforme
         data_storage.set('target_pos', target_fpos, i)
         data_storage.set('error', error, i)
         data_storage.set('derror', derror, i)
-    return data_storage
-
-
-def test_trajectory_track_2D(*args, **kwargs):
-    sim_config = SimulationConfiguration(**kwargs)
-    # Extract key objects from configuration object
-    t_vect, robot, trajectory, transformer, controller = sim_config.get_elements()
-    # Configure SimulationDataStorage
-    data_storage = SimulationDataStorage(t_vect)
-    data_storage.add_argument(SimData.robot_pose)
-    data_storage.add_argument(SimData.robot_frenet_pose)
-    data_storage.add_argument(SimData.control)
-    data_storage.add_argument(SimData.trajectory_2d)
-    data_storage.add_argument(SimData.target_pos)
-    data_storage.add_argument('error', 2)
-    data_storage.add_argument('derror', 2)
-
-    data_storage = _simulate_experiment(sim_config, data_storage, trajectory,
-                                        robot, transformer, controller)
     return data_storage
