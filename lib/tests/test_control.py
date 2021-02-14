@@ -18,7 +18,7 @@ logger=logging.getLogger(__name__)
 def test_trajectory_track_2D(*args, **kwargs):
     sim_config = SimulationConfiguration(**kwargs)
     # Extract key objects from configuration object
-    t_vect, robot, trajectory, transformer, controller = sim_config.get_elements()
+    t_vect, robot, trajectory, transformer, controller, planner = sim_config.get_elements()
     # Configure SimulationDataStorage
     data_storage = SimulationDataStorage(t_vect)
     data_storage.add_argument(SimData.robot_pose)

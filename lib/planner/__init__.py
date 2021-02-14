@@ -3,4 +3,5 @@ Planner package initializer
 """
 
 from .trajectory_planner import TrajectoryPlanner
+from .planner import Planner 
 from .frenet import Frenet
