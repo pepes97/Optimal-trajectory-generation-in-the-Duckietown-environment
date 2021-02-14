@@ -30,10 +30,10 @@ def test_trajectory_track_2D(*args, **kwargs):
     data_storage.add_argument('derror', 2)
 
     data_storage = _simulate_experiment(sim_config, data_storage, trajectory,
-                                        robot, transformer, controller)
+                                        robot, transformer, controller, planner)
     return data_storage
 
-def _simulate_experiment(sim_config, data_storage, trajectory, robot, transformer, controller):
+def _simulate_experiment(sim_config, data_storage, trajectory, robot, transformer, controller, planner):
     # Simulation loop
     t_vect = sim_config.get_time_vect()
     robot_p = robot.p

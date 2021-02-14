@@ -148,6 +148,20 @@ class TrajectoryPlanner(Planner):
                         frenet_paths.append(f)
         return frenet_paths
     
+    def optimal_at_time(self, time, opt_path, type_path) -> (float, float, float):
+        if time <= opt_path.t[0]:
+            print('Warning: requested time is out of optimal path time interval, increase the query time')
+            index = 0
+        elif time >= opt_path.t[-1]:
+            print('Warning: requested time is out of optimal path time interval, reduce the query time')
+            index = -1
+        else:
+            index = round((time - opt_path.t[0])/self.delta_t)
+        if type_path == "s":
+            return (opt_path.s[index], opt_path.dot_s[index], opt_path.ddot_s[index])
+        else:
+            return (opt_path.d[index], opt_path.dot_d[index], opt_path.ddot_d[index])
+
     def replan_ctot(self, time: float): # replan w.r.t opt_tot
         self.p0 = self.optimal_at_time(time, self.opt_path_tot, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
         self.s0 = self.optimal_at_time(time, self.opt_path_tot, "s") # Initial step in frenet-frame as tuple (s0, ds0)
