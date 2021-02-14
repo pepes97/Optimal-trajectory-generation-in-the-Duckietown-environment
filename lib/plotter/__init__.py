@@ -4,3 +4,4 @@ Printer package initializer
 
 from .utils import generate_4_2_layout
 from .plot_2d import plot_2d_simulation, plot_2d_simulation_xy, plot_2d_simulation_bot_xy
+from .plot_2d_anim import plot_2d_simulation_anim

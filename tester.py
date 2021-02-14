@@ -27,7 +27,7 @@ TEST_MAP = {
 }
 
 TEST_PRINT_MAP = {
-    'trajectory_track_2D' : plot_2d_simulation,
+    'trajectory_track_2D' : plot_2d_simulation_anim,
     'simlogger' : None,
     'serializer' : None,
     'config_generator' : None,
@@ -96,8 +96,9 @@ if __name__ == '__main__':
         if args.print is True and TEST_PRINT_MAP[args.test] is not None:
             print(f'{bcolors.OKGREEN}Printing results{bcolors.ENDC}')
             result_figure = TEST_PRINT_MAP[args.test](result)
-            plt.show()
+            #plt.show()
             # Store plot
+            """
             res_dir = os.path.join(os.path.join(os.getcwd(), IMG_PATH), datetime.datetime.now().strftime('%Y%m%d'))
             try:
                 os.makedirs(res_dir)
@@ -107,5 +108,6 @@ if __name__ == '__main__':
             fig_path = os.path.join(res_dir, f'{args.test}_'+time.strftime("%Y-%m-%d_%H-%M-%S") +'.jpg')
             print(f'{bcolors.OKGREEN}Storing plot in :{bcolors.ENDC}{fig_path} ')
             result_figure.savefig(fig_path)
+            """
     
     exit(0)
