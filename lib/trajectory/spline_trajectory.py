@@ -3,7 +3,7 @@ import math
 import numpy as np
 import bisect
 import logging
-#from .defs import DifferentiableFunction, Trajectory
+from .defs import DifferentiableFunction, Trajectory
 
 logger = logging.getLogger(__name__)
 
@@ -122,8 +122,8 @@ class Spline():
         return B
 
 
-#class SplineTrajectory2D(Trajectory, DifferentiableFunction):
-class SplineTrajectory2D():
+class SplineTrajectory2D(Trajectory, DifferentiableFunction):
+#class SplineTrajectory2D():
     """
     2D Cubic Spline class
     """
