@@ -24,7 +24,7 @@ def test_plot_unicycle(*args, **kwargs):
     data_storage = SimulationDataStorage(t_vect)
     data_storage.add_argument(SimData.robot_pose)
 
-    sensor = ProximitySensor(10, np.pi/5)
+    sensor = ProximitySensor(10, np.pi/8)
     sensor.attach(robot)
 
     data_storage = __simulate_experiment(sim_config, data_storage, trajectory, robot, transformer, controller, planner)
@@ -32,7 +32,8 @@ def test_plot_unicycle(*args, **kwargs):
     def __plot_fn():
         fig, ax = generate_1_1_layout()
         ax.axis('equal')
-        plot_trajectory(ax, trajectory, t_vect)
+        ax.use_sticky_edges = False
+        trajectory_line = plot_trajectory(ax, trajectory, t_vect)
         unicycle_poly = plot_unicycle(ax, robot)
         sensor_line   = plot_proximity_sensor(ax, sensor, robot)
 
@@ -40,15 +41,20 @@ def test_plot_unicycle(*args, **kwargs):
         rpose = data_storage.get(SimData.robot_pose)
         
         def animate(i):
+            # Center camera to robot
+            ax.set_xlim(xmin=rpose[0, i] - 10, xmax=rpose[0, i] + 10)
+            ax.set_ylim(ymin=rpose[1, i] - 10, ymax=rpose[1, i] + 10)
+            ax.figure.canvas.draw()
+            
             unicycle_poly.set_xy(compute_unicycle_vertices(rpose[:, i]))
             # Get new sensor's points 
             p1, p2 = compute_sensor_vertices(sensor, rpose[:, i])
             sensor_line.set_xdata([p1[0], rpose[0, i], p2[0]])
             sensor_line.set_ydata([p1[1], rpose[1, i], p2[1]])
             return [unicycle_poly, sensor_line]
-        ani = animation.FuncAnimation(fig, animate, frames=t_vect.shape[0], interval=30, blit=True)
+        ani = animation.FuncAnimation(fig, animate, frames=t_vect.shape[0], interval=30, blit=False)
         plt.show()
-        ani.save('images/plot.gif')
+        
     __plot_fn()
 
 def __simulate_experiment(sim_config, data_storage, trajectory, robot, transformer, controller, planner) -> SimulationDataStorage:
