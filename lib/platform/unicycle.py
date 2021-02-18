@@ -28,3 +28,6 @@ class Unicycle:
         vel = kinematicModel()
         self.p += dt * vel
         return self.p, vel
+
+    def pose(self):
+        return self.p

@@ -24,6 +24,7 @@ TEST_MAP = {
     'serializer' : test_serializer,
     'config_generator' : test_generate_configurations,
     'bot' : test_bot,
+    'plot_unicycle' : test_plot_unicycle,
 }
 
 TEST_PRINT_MAP = {
@@ -31,7 +32,8 @@ TEST_PRINT_MAP = {
     'simlogger' : None,
     'serializer' : None,
     'config_generator' : None,
-    'bot' : plot_2d_simulation_bot_xy
+    'bot' : plot_2d_simulation_bot_xy,
+    'plot_unicycle' : None
 }
 
 IMG_PATH = './images/'
@@ -60,6 +62,7 @@ if __name__ == '__main__':
     parser.add_argument('--log', '-l',  metavar='l', type=str, help='logging level', default='WARNING')
     parser.add_argument('--store', '-s',  metavar='s', type=str, help='log path')
     parser.add_argument('--print', '-p', help='Print flag', action='store_true')
+    parser.add_argument('--save-plot', help='Save plot flag', action='store_true')
     parser.add_argument('--config', '-c', type=str, help='Simulation configuration file')
     try:
         args = parser.parse_args()
@@ -96,18 +99,19 @@ if __name__ == '__main__':
         if args.print is True and TEST_PRINT_MAP[args.test] is not None:
             print(f'{bcolors.OKGREEN}Printing results{bcolors.ENDC}')
             result_figure = TEST_PRINT_MAP[args.test](result)
-            #plt.show()
+            plt.show()
             # Store plot
-            """
-            res_dir = os.path.join(os.path.join(os.getcwd(), IMG_PATH), datetime.datetime.now().strftime('%Y%m%d'))
-            try:
-                os.makedirs(res_dir)
-            except OSError as e:
-                if e.errno != errno.EEXIST:
-                    raise RuntimeError
-            fig_path = os.path.join(res_dir, f'{args.test}_'+time.strftime("%Y-%m-%d_%H-%M-%S") +'.jpg')
-            print(f'{bcolors.OKGREEN}Storing plot in :{bcolors.ENDC}{fig_path} ')
-            result_figure.savefig(fig_path)
-            """
+            if args.store_plot is True:
+                res_dir = os.path.join(os.path.join(os.getcwd(), IMG_PATH),
+                                       datetime.datetime.now().strftime('%Y%m%d'))
+                try:
+                    os.makedirs(res_dir)
+                except OSError as e:
+                    if e.errno != errno.EEXIST:
+                        raise RuntimeError
+                    fig_path = os.path.join(res_dir, f'{args.test}_'+time.strftime("%Y-%m-%d_%H-%M-%S") +'.jpg')
+                    print(f'{bcolors.OKGREEN}Storing plot in :{bcolors.ENDC}{fig_path} ')
+                    result_figure.savefig(fig_path)
+            
     
     exit(0)

@@ -31,18 +31,32 @@ class UniBot:
         self.robot_pose, robot_vel = self.robot.step(u, dsp.dt)
         return self.robot_pose
 
+class IdealBot:
+    def __init__(self, trajectory: Trajectory, t_start: float, dt: float=0.1):
+        self.trajectory = trajectory
+        self.t_start = t_start
+        self.dt = dt
+        self.t = self.t_start
+
+    def step(self) -> np.array:
+        robot_pos  = self.trajectory.compute_pt(self.t)
+        self.t += self.dt
+        return robot_pos
+
 def test_bot(**kwargs) -> SimulationDataStorage:
     #kwargs['t_end'] = 60
     sim_config = SimulationConfiguration(**kwargs)
     # Extract key objects from configuration object
     t_vect, robot, trajectory, transformer, controller = sim_config.get_elements()
     data_storage = SimulationDataStorage(t_vect)
-    data_storage.add_argument(SimData.bot0_pose)
-    data_storage.add_argument(SimData.bot1_pose)
+    data_storage.add_argument(SimData.bot0_position)
+    data_storage.add_argument(SimData.bot1_position)
     data_storage.add_argument(SimData.trajectory_2d)
     # Generate two bots
-    bot0 = UniBot(trajectory, np.append(trajectory.compute_pt(10), 0.1), 10)
-    bot1 = UniBot(trajectory, np.append(trajectory.compute_pt(0.1), 0.3), 0.1)
+    #bot0 = UniBot(trajectory, np.append(trajectory.compute_pt(10), 0.1), 10)
+    #bot1 = UniBot(trajectory, np.append(trajectory.compute_pt(0.1), 0.3), 0.1)
+    bot0 = IdealBot(trajectory, 0.0)
+    bot1 = IdealBot(trajectory, 10.0)
     bot_lst = [bot0, bot1]
 
     data_storage = _simulate_experiment(sim_config, data_storage, trajectory, robot,
@@ -56,7 +70,7 @@ def _simulate_experiment(sim_config, data_storage, trajectory, robot, transforme
         target_pos = trajectory.compute_pt(t_vect[i])
         for j, bot in enumerate(bot_lst):
             bpose = bot.step()
-            data_storage.set(f'bot{j}_pose', bpose, i)
+            data_storage.set(f'bot{j}_position', bpose, i)
         
         # log data
         data_storage.set('trajectory', target_pos, i)

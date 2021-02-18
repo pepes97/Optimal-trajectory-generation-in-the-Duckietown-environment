@@ -7,6 +7,7 @@ import numpy as np
 
 from .utils import *
 from ..logger import SimulationDataStorage, SimData
+from ..transform import homogeneous_transform
 
 def plot_2d_simulation_anim(data: SimulationDataStorage) -> plt.Figure:
     fig, gs = generate_4_2_layout()
@@ -90,3 +91,8 @@ def plot_2d_simulation_bot_xy_anim(data: SimulationDataStorage) -> plt.Figure:
     ax0.set_ylabel('y')
     # TODO
 
+def plot_2d_bot_anim(data: SimulationDataStorage) -> plt.Figure:
+    def animate(i):
+        pass
+    pass
+    # TODO

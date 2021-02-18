@@ -1,10 +1,15 @@
 import numpy as np
+import logging
+import copy
 from .planner import Planner 
 from ..trajectory import QuinticPolynomial
 from ..trajectory import QuarticPolynomial
 from operator import attrgetter
-import copy
 from .frenet import Frenet
+
+logger = logging.getLogger(__name__)
+
+
 
 
 class TrajectoryPlanner(Planner):
@@ -173,3 +178,103 @@ class TrajectoryPlanner(Planner):
         self.replan_ctot(time=time)
         
         return self.opt_path_tot
+
+class TrajectoryPlannerDefaultParams:
+    dt = 0.1
+    kj = 1
+    ks = 1
+    kd = 1
+    klong = 1
+    klat  = 1
+    desired_speed = 1
+    road_width = 1
+    min_t = 0.
+    max_t = 10.
+
+tpdp = TrajectoryPlannerDefaultParams
+
+class TrajectoryPlannerParams:
+    """ Container for TrajectoryPlanner parameters
+    """
+    def __init__(self, *args, **kwargs):
+        self.dt = ... # Sampling time interval
+        self.kj = ... # Cost term for jerk
+        self.ks = ... # Cost term for longitudinal displacement
+        self.kd = ... # Cost term for lateral displacement
+        self.klong = ... # Cost term for longitudinal trajectory
+        self.klat  = ... # Cost term for lateral trajectory
+        
+        self.desired_speed = ... # Desired speed
+        self.road_width = ...    # Maximum road width
+        self.min_t = ... # Minimum time displacement
+        self.max_t = ... # Maximum time displacement       
+        self.__dict__.update(kwargs)
+        ...
+    def dict(self):
+        return self.__dict__
+
+class TrajectoryPlannerV2(Planner):
+    def __init__(self, *args, **kwargs):
+        # Load parameters if TrajectoryPlannerParams object is passed
+        if args is not None and len(args) > 0:
+            if isinstance(args[0]) == TrajectoryPlannerParams:
+                self.__dict__.update(args[0].__dict__)
+        # Load parameters passed via arguments
+        if kwargs is not None:
+            self.__dict__.update(kwargs)
+
+    def step(self, *args, **kwargs) -> np.array:
+        """ Returns the frenet target position at time t
+        """
+        logger.error('Function not implemented yet')
+        # Basic steps
+        # take current time
+        # if time exceedes local time boundaries, replan and get optimal trajectory
+        # else take current optimal trajectory
+        # Sample trajectory at the current time
+        # return sample
+        # TODO(Take requirements for obstacle avoidance into account)
+        return np.zeros((2, ))
+    
+
+    # Define inner path candidate
+    class PathCandidate:
+        """ Object that represent a path candidate. 
+        Contains costs term and trajectory"""
+        def __init__(self, *args, **kwargs):
+            self.trajectory = None
+            self.cd = 0. # Lateral cost
+            self.cv = 0. # TODO
+
+    def __generate_lateral_candidates(self, p: np.array, *args, **kwargs) -> [PathCandidate]:
+        """ Generates lateral PathCandidate(s)
+        
+        Parameters
+        ----------
+        p : np.array(3)
+            Current robot position in frenet frame
+        """
+        candidate_lst = []
+        d_sampling_interval = ... # Array containing three elements (d_min, d_max, delta_d)
+        for di in np.arange(d_sampling_interval[0], d_sampling_interval[1], d_sampling_interval[2]):
+            for tj in np.arange(self.min_t, self.max_t, self.dt):
+                # Generate quintic polynomial trajectory
+                trajectory = ...
+                # Compute candidate attributes (cost, etc)
+                # Build a PathCandidate object for the current configuration
+                candidate = PathCandidate()
+                candidate_lst.append(candidate)
+        return candidate_lst
+
+    def __generate_longitudinal_candidates(self, p: np.array, *args, **kwargs) -> [PathCandidate]:
+        """ Generates longitudinal PathCandidate(s)
+        
+        Parameters
+        ----------
+        p : np.array(3)
+            Current robot position in frenet frame
+        """
+        candidate_lst = []
+        # TODO
+        ...
+        return candidate_lst

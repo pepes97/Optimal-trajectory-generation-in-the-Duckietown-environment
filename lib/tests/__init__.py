@@ -7,4 +7,6 @@ from .test_simlogger import test_simlogger
 from .test_serializer import test_serializer
 from .test_generate_configurations import test_generate_configurations
 from .test_bot import test_bot
+from .test_sensor import test_proximity_sensor
+from .test_plot import test_plot_unicycle
 from .config import DefaultSimulationParameters 
