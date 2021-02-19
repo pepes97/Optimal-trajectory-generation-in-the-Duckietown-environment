@@ -18,6 +18,12 @@ from ..sensor import ProximitySensor
 logger = logging.getLogger(__name__)
 
 def test_plot_unicycle(*args, **kwargs):
+    plot_flag = False
+    store_plot = None
+    if 'plot' in kwargs:
+        plot_flag = kwargs['plot']
+    if 'store_plot' in kwargs:
+        store_plot = kwargs['store_plot']
     sim_config = SimulationConfiguration(**kwargs)
     # Extract key objects from configuration object
     t_vect, robot, trajectory, transformer, controller, planner = sim_config.get_elements()
@@ -29,10 +35,9 @@ def test_plot_unicycle(*args, **kwargs):
 
     data_storage = __simulate_experiment(sim_config, data_storage, trajectory, robot, transformer, controller, planner)
 
-    def __plot_fn():
+    def __plot_fn(store: str=None):
         fig, ax = generate_1_1_layout()
         ax.axis('equal')
-        ax.use_sticky_edges = False
         trajectory_line = plot_trajectory(ax, trajectory, t_vect)
         unicycle_poly = plot_unicycle(ax, robot)
         sensor_line   = plot_proximity_sensor(ax, sensor, robot)
@@ -46,16 +51,21 @@ def test_plot_unicycle(*args, **kwargs):
             ax.set_ylim(ymin=rpose[1, i] - 10, ymax=rpose[1, i] + 10)
             ax.figure.canvas.draw()
             
-            unicycle_poly.set_xy(compute_unicycle_vertices(rpose[:, i]))
+            
             # Get new sensor's points 
             p1, p2 = compute_sensor_vertices(sensor, rpose[:, i])
             sensor_line.set_xdata([p1[0], rpose[0, i], p2[0]])
             sensor_line.set_ydata([p1[1], rpose[1, i], p2[1]])
+            # Get new robot vertices
+            unicycle_poly.set_xy(compute_unicycle_vertices(rpose[:, i]))
             return [unicycle_poly, sensor_line]
         ani = animation.FuncAnimation(fig, animate, frames=t_vect.shape[0], interval=30, blit=False)
+        if store is not None:
+            ani.save(store)
         plt.show()
-        
-    __plot_fn()
+    if plot_flag:
+        __plot_fn(store_plot)
+    return data_storage
 
 def __simulate_experiment(sim_config, data_storage, trajectory, robot, transformer, controller, planner) -> SimulationDataStorage:
     # Simulation loop

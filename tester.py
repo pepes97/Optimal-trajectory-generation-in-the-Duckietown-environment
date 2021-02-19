@@ -25,18 +25,8 @@ TEST_MAP = {
     'config_generator' : test_generate_configurations,
     'bot' : test_bot,
     'plot_unicycle' : test_plot_unicycle,
+    'obstacles' : test_obstacles_moving,
 }
-
-TEST_PRINT_MAP = {
-    'trajectory_track_2D' : plot_2d_simulation_anim,
-    'simlogger' : None,
-    'serializer' : None,
-    'config_generator' : None,
-    'bot' : plot_2d_simulation_bot_xy,
-    'plot_unicycle' : None
-}
-
-IMG_PATH = './images/'
 
 def handle_parser(args):
     if args.test not in TEST_MAP.keys():
@@ -62,7 +52,7 @@ if __name__ == '__main__':
     parser.add_argument('--log', '-l',  metavar='l', type=str, help='logging level', default='WARNING')
     parser.add_argument('--store', '-s',  metavar='s', type=str, help='log path')
     parser.add_argument('--print', '-p', help='Print flag', action='store_true')
-    parser.add_argument('--save-plot', help='Save plot flag', action='store_true')
+    parser.add_argument('--save-plot', help='Path and extension of the plot image', type=str)
     parser.add_argument('--config', '-c', type=str, help='Simulation configuration file')
     try:
         args = parser.parse_args()
@@ -81,13 +71,14 @@ if __name__ == '__main__':
             config_obj = Serializer('jsonpickle').deserialize(args.config)
         except:
             logger.error(f'Could not load {args.config} configuration file')
+        
     # Execute test routine
     print(f'{bcolors.OKGREEN}Launching test for {args.test}{bcolors.ENDC}')
     config_args = config_obj.__dict__ if config_obj is not None else None
     if config_args is None:
-        result = TEST_MAP[args.test]()
+        result = TEST_MAP[args.test](plot=args.print, store_plot=args.save_plot)
     else:
-        result = TEST_MAP[args.test](**config_args)
+        result = TEST_MAP[args.test](**config_args, plot=args.print, store_plot=args.save_plot)
     if result is not None:
         # Process results
         # Store results
@@ -96,6 +87,8 @@ if __name__ == '__main__':
             logger.warning('Store and load callbacks are not ready yet.')
             #print(f'{bcolors.OKGREEN}Storing results to {log_path}{bcolors.ENDC}')
             #result.save(log_path)
+        """
+        # MOVING THIS SECTION INSIDE TESTS
         if args.print is True and TEST_PRINT_MAP[args.test] is not None:
             print(f'{bcolors.OKGREEN}Printing results{bcolors.ENDC}')
             result_figure = TEST_PRINT_MAP[args.test](result)
@@ -112,6 +105,6 @@ if __name__ == '__main__':
                     fig_path = os.path.join(res_dir, f'{args.test}_'+time.strftime("%Y-%m-%d_%H-%M-%S") +'.jpg')
                     print(f'{bcolors.OKGREEN}Storing plot in :{bcolors.ENDC}{fig_path} ')
                     result_figure.savefig(fig_path)
-            
+        """ 
     
     exit(0)

@@ -12,10 +12,18 @@ from ..logger import SimulationDataStorage, SimData
 from ..trajectory import QuinticTrajectory2D, CircleTrajectory2D, SplineTrajectory2D
 from ..transform import FrenetGNTransform
 from ..controller import FrenetIOLController
+from ..plotter import *
 
 logger=logging.getLogger(__name__)
 
 def test_trajectory_track_2D(*args, **kwargs):
+    plot_flag = False
+    store_plot = None
+    if 'plot' in kwargs:
+        plot_flag = kwargs['plot']
+    if 'store_plot' in kwargs:
+        store_plot = kwargs['store_plot']
+    
     sim_config = SimulationConfiguration(**kwargs)
     # Extract key objects from configuration object
     t_vect, robot, trajectory, transformer, controller, planner = sim_config.get_elements()
@@ -31,6 +39,15 @@ def test_trajectory_track_2D(*args, **kwargs):
 
     data_storage = _simulate_experiment(sim_config, data_storage, trajectory,
                                         robot, transformer, controller, planner)
+
+    def __plot_fn(store: str=None):
+        fig = plot_2d_simulation(data_storage)
+        if store is not None:
+            # TODO (generate path inside images/<timeoftheday>/store:str)
+            plt.savefig(store)
+        plt.show()
+    if plot_flag:
+        __plot_fn(store_plot)
     return data_storage
 
 def _simulate_experiment(sim_config, data_storage, trajectory, robot, transformer, controller, planner):

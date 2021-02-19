@@ -11,6 +11,7 @@ from ..trajectory import CircleTrajectory2D, Trajectory
 from ..transform import FrenetGNTransform
 from ..controller import FrenetIOLController, FrenetPathFollowerController
 from ..platform import Unicycle
+from ..plotter import *
 
 
 logger = logging.getLogger(__name__)
@@ -44,7 +45,12 @@ class IdealBot:
         return robot_pos
 
 def test_bot(**kwargs) -> SimulationDataStorage:
-    #kwargs['t_end'] = 60
+    plot_flag = False
+    store_plot = None
+    if 'plot' in kwargs:
+        plot_flag = kwargs['plot']
+    if 'store_plot' in kwargs:
+        store_plot = kwargs['store_plot']
     sim_config = SimulationConfiguration(**kwargs)
     # Extract key objects from configuration object
     t_vect, robot, trajectory, transformer, controller = sim_config.get_elements()
@@ -61,6 +67,14 @@ def test_bot(**kwargs) -> SimulationDataStorage:
 
     data_storage = _simulate_experiment(sim_config, data_storage, trajectory, robot,
                                         transformer, controller, bot_lst)
+
+    def __plot_fn(store: str=None):
+        fig = ...
+        if store is not None:
+            plt.savefig(store)
+        plt.show()
+    if plot_flag:
+        __plot_fn(store_plot)
     return data_storage
 
 def _simulate_experiment(sim_config, data_storage, trajectory, robot, transformer, controller, bot_lst) -> SimulationDataStorage:

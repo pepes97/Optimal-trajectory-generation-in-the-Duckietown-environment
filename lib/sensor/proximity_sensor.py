@@ -50,14 +50,18 @@ class ProximitySensor(Sensor):
         
         found_obstacles = []
         # Get cone tip
-        robot_pose = self.robot.position()
+        if 'rpose' in kwargs:
+            logger.debug(f'Using passed pose: {kwargs["rpose"]}')
+            robot_pose = kwargs['rpose']
+        else:
+            robot_pose = self.robot.pose()
         p = robot_pose[:2]
         t = robot_pose[2]
         # Get cone direction
         dir = np.array([np.cos(t), np.sin(t)])
         h = self.range
         for obstacle in self.obstacles:
-            diff_vect = p - obstacle.position()
+            diff_vect = obstacle.position - p
             cone_dist = np.dot(diff_vect, dir)
             # Reject objects not in range 
             if cone_dist < 0. or cone_dist >= self.range:

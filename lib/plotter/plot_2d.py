@@ -9,7 +9,7 @@ from .utils import *
 from ..logger import SimulationDataStorage, SimData
 from ..platform import Unicycle
 from ..transform import homogeneous_transform
-from ..sensor import ProximitySensor
+from ..sensor import ProximitySensor, Obstacle
 
 logger = logging.getLogger(__name__)
 
@@ -166,3 +166,9 @@ def plot_proximity_sensor(ax, sensor: ProximitySensor, robot):
                     [p1[1], rposition[1], p2[1]], 'r')
     return line
 
+def plot_obstacles(ax, obstacle_lst: [Obstacle], *args, **kwargs):
+    """ Plot on the axis ax the obstacles in obstacle_lst
+    """
+    for o in obstacle_lst:
+        ax.scatter(o.position[0], o.position[1], **kwargs)
+    return None
