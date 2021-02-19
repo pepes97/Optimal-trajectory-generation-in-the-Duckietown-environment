@@ -8,7 +8,7 @@ import numpy as np
 from .config import SimulationConfiguration
 from .config import DefaultSimulationParameters as dsp
 
-from ..logger import SimulationDataStorage, SimData
+from ..logger import SimulationDataStorage, SimData, timeprofiledecorator
 from ..trajectory import QuinticTrajectory2D, CircleTrajectory2D, SplineTrajectory2D
 from ..transform import FrenetGNTransform
 from ..controller import FrenetIOLController

@@ -1,11 +1,11 @@
 import numpy as np
 import logging
 import copy
-from .planner import Planner 
-from ..trajectory import QuinticPolynomial
-from ..trajectory import QuarticPolynomial
 from operator import attrgetter
-from .frenet import Frenet
+from .planner import Planner 
+from ..trajectory import QuinticPolynomial, QuarticPolynomial
+from .frenet import Frenet # Still needed ?
+from ..logger import timeprofiledecorator # Profiling wrapper
 
 logger = logging.getLogger(__name__)
 
@@ -235,7 +235,16 @@ class TrajectoryPlannerV2(Planner):
         # return sample
         # TODO(Take requirements for obstacle avoidance into account)
         return np.zeros((2, ))
-    
+
+    def replan(self, t_replan: float, robot_fpose: np.array, robot_dfpose: np.array):
+        """ Apply a replanning step to generate new possible trajectories
+        """
+        # TODO
+        self.t_start = t_replan
+        self.robot_fpose = robot_fpose
+        self.robot_dfpose = robot_dfpose
+        # Regenerate optimal path
+        self.optimal_candidate = self.__generate_optimal_candidate()
 
     # Define inner path candidate
     class PathCandidate:
@@ -278,3 +287,24 @@ class TrajectoryPlannerV2(Planner):
         # TODO
         ...
         return candidate_lst
+
+    @timeprofiledecorator
+    def __generate_optimal_candidate(self):
+        """ Generate range polynomials for both longitudinal and lateral components, then search for
+        the minimum cost one
+        """
+        
+        def _generate_candidates(self):
+            """ Generate all possible candidates
+            """
+            for target_t in range(np.arange(0.0, self.max_t)):
+                # for target_s in ROBA_S
+                #     # generate candidate_s
+                #     # for target_d in ROBA_D
+                #     #      # generate candidate_d
+                #     #      # do magic merging
+                ...
+            return None
+            # TODO
+        # TODO
+        return None

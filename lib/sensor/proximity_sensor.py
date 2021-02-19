@@ -8,7 +8,7 @@ from .obstacle import Obstacle
 from ..platform import Unicycle
 
 logger = logging.getLogger(__name__)
-
+ 
 class ProximitySensor(Sensor):
     """ ProximitySensor produces a sensor which can find obstacles inside 
     a user defined cone in front of the sensor
