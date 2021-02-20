@@ -184,14 +184,15 @@ class TrajectoryPlannerDefaultParams:
     kj = 1
     ks = 1
     kd = 1
-    kdot_s = 1
+    kt = 0.01
+    kdots = 1
     klong = 1
     klat  = 1
     delta_t = 0.05
     desired_speed = 5
     max_road_width = 2.45
-    min_t = 0.
-    max_t = 0.9
+    min_t = 0.1
+    max_t = 5
     d_road_width = 0.6
     d_d_s = 1
     low_speed_threshold = 2
@@ -211,16 +212,17 @@ class TrajectoryPlannerParams:
         self.ks = tpdp.ks # Cost term for longitudinal displacement
         self.kd = tpdp.kd # Cost term for lateral displacement
         self.klong = tpdp.klong # Cost term for longitudinal trajectory
-        self.kdot_s = tpdp.kdot_s # Cost term for velocity keeping (longitudinal trajectory)
+        self.kdots = tpdp.kdots # Cost term for velocity keeping (longitudinal trajectory)
         self.klat  = tpdp.klat # Cost term for lateral trajectory
+        self.kt = tpdp.kt 
         
         self.delta_t = tpdp.delta_t 
         self.desired_speed = tpdp.desired_speed # Desired speed
         self.max_road_width = tpdp.max_road_width    # Maximum road width
         self.d_road_width = tpdp.d_road_width # step road width
         self.d_d_s = tpdp.d_d_s # step s longitunal trajectory
-        self.min_t = tpdp.max_t # Minimum time displacement
-        self.max_t = tpdp.min_t # Maximum time displacement       
+        self.min_t = tpdp.min_t # Minimum time displacement
+        self.max_t = tpdp.max_t # Maximum time displacement       
         self.low_speed_threshold = tpdp.low_speed_threshold # threshold for low speed trajectory
         self.target_distance = tpdp.target_distance # distance for following, merging ad stopping trajectory
         self.num_sample = tpdp.num_sample # num sample si_interval (target) and di_interval (without target)
@@ -231,6 +233,17 @@ class TrajectoryPlannerParams:
         ...
     def dict(self):
         return self.__dict__
+
+# Define inner path candidate
+class PathCandidate():
+    """ Object that represent a path candidate. 
+    Contains costs term and trajectory"""
+    def __init__(self, *args, **kwargs):
+        self.longitudinal_trajectory = None
+        self.lateral_trajectory = None
+        self.cd = 0. # Longitudinal cost
+        self.cv = 0. # Lateral cost
+        self.ctot = 0 # Longitudinal + Lateral cost 
 
 class TrajectoryPlannerV2(Planner):
     def __init__(self, *args, **kwargs):
@@ -279,16 +292,7 @@ class TrajectoryPlannerV2(Planner):
         self.optimal_candidate = self.__generate_optimal_candidate(s,d, t_replan)
         return self.s, self.d
 
-    # Define inner path candidate
-    class PathCandidate:
-        """ Object that represent a path candidate. 
-        Contains costs term and trajectory"""
-        def __init__(self, *args, **kwargs):
-            self.longitudinal_trajectory = None
-            self.lateral_trajectory = None
-            self.cd = 0. # Longitudinal cost
-            self.cv = 0. # Lateral cost
-            self.ctot = 0 # Longitudinal + Lateral cost 
+    
 
     def __generate_lateral_candidates(self, p: np.array, *args, **kwargs) -> [PathCandidate]:
         """ Generates lateral PathCandidate(s)
@@ -353,7 +357,6 @@ class TrajectoryPlannerV2(Planner):
         
         candidate_lst = []
         for si_dsi in long_interval:
-            
             ## Longitudinal trajectory
             for tj in np.arange(self.t_interval[0], self.t_interval[1], self.t_interval[2]):
                 # Path candidate
@@ -367,8 +370,8 @@ class TrajectoryPlannerV2(Planner):
                     s1 = path_long.compute_pt(tj)
                     s0 = path_long.compute_pt(self.t_start)
                     dot_s1 = path_long.compute_first_derivative(tj)
-                    ddot_s1 = np.true_divide(np.power(path.compute_second_derivative(tj), 3), 3)
-                    ddot_s0 = np.true_divide(np.power(path.compute_second_derivative(self.t_start), 3), 3)
+                    ddot_s1 = np.true_divide(np.power(path_long.compute_second_derivative(tj), 3), 3)
+                    ddot_s0 = np.true_divide(np.power(path_long.compute_second_derivative(self.t_start), 3), 3)
                     squared_jerklong = ddot_s1 - ddot_s0
                     # longitudinal cost (velocity keeping)
                     C_long = candidate.cv = self.kj * squared_jerklong + self.kt * tj + self.kdots * (dot_s1 - self.desired_speed) ** 2 
@@ -393,7 +396,7 @@ class TrajectoryPlannerV2(Planner):
                         squared_jerk = ddot_d1-ddot_d0 
                         C_lat = candidate_d.cd = self.kj * squared_jerk + self.kt * tj + self.kd * (di-self.dd) ** 2 # Compute longitudinal cost
                         candidate_d.ctot = self.klat * C_lat + self.klong * C_long
-                        candidate_lst.append(f)
+                        candidate_lst.append(candidate_d)
             
         return candidate_lst
     

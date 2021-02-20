@@ -14,7 +14,7 @@ from ..planner import TrajectoryPlannerParams
 logger = logging.getLogger(__name__)
 
 class DefaultSimulationParameters:
-    t_start = 0.0
+    t_start = 0.1
     t_end  = 50
     dt     = 0.1
     robot_pose = np.array([0.0, 0.0, 0.0])
