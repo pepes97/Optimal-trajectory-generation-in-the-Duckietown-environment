@@ -74,15 +74,18 @@ def _simulate_experiment(sim_config, data_storage, trajectory, robot, transforme
         # target_dpos = trajectory.compute_first_derivative(t_vect[i])
         # target_fdpos = transformer.transform(target_dpos)
         if i == 0:
-            pos_s, pos_d = planner.step(t_vect[i], robot_fpose, robot_fdp, robot_fddp)
+            s0 = (robot_fpose[0],robot_fdp[0],robot_fddp[0])
+            d0 = (robot_fpose[1],robot_fdp[1],robot_fddp[1])
+            planner.initialize(t0 = t_vect[i], p0 = d0, s0 = s0)
+            pos_s, pos_d = planner.s0, planner.p0
         else:
-            pos_s, pos_d = planner.step(t_vect[i])
-            target_pos = transformer.itransform(np.array([pos_s[0], pos_d[0]]))
-            target_fpos = np.array([pos_s[0], pos_d[0]])
-            target_fdpos = np.array([pos_s[1], pos_d[1]])
-            error = target_fpos - robot_fpose[0:2]
-            derror = target_fdpos - robot_fdp
-
+            pos_s, pos_d = planner.replanner(t_vect[i])
+        target_pos = transformer.itransform(np.array([pos_s[0], pos_d[0]]))
+        target_fpos = np.array([pos_s[0], pos_d[0]])
+        target_fdpos = np.array([pos_s[1], pos_d[1]])
+        error = target_fpos - robot_fpose[0:2]
+        derror = target_fdpos - robot_fdp
+        print(pos_s, pos_d)
         # Get path curvature at estimate
         curvature = trajectory.compute_curvature(est_pt)
 

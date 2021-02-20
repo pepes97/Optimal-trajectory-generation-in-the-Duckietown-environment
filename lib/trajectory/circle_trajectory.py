@@ -31,7 +31,8 @@ class CircleTrajectory2D(Trajectory, DifferentiableFunction):
     def compute_pt(self, t):
         t = float(t)
         while t>= 2*self.l + 2*self.r*math.pi + 2*self.h:
-            t= t- (2*self.l + 2*self.r*math.pi + 2*self.h)
+            # t= t- (2*self.l + 2*self.r*math.pi + 2*self.h)
+            t = float(t) % (2*self.l + 2*self.r * np.pi + 2*self.h) 
 
         # first segment
         if t>=0 and t<self.l:
@@ -87,7 +88,8 @@ class CircleTrajectory2D(Trajectory, DifferentiableFunction):
     def compute_curvature(self, t):
         t= float(t)
         while t>= 2*self.l + 2*self.r*math.pi + 2*self.h:
-            t= t- (2*self.l + 2*self.r*math.pi + 2*self.h)
+            # t= t- (2*self.l + 2*self.r*math.pi + 2*self.h)
+            t = float(t) % (2*self.l + 2*self.r * np.pi + 2*self.h) 
 
         # first segment
         if t>=0 and t<self.l:

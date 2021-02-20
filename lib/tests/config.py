@@ -7,7 +7,7 @@ from ..platform import Unicycle
 from ..trajectory import Trajectory, QuinticTrajectory2D
 from ..transform import FrenetTransform, FrenetGNTransform
 from ..controller import Controller, FrenetIOLController
-from ..planner import Planner, TrajectoryPlannerV2
+from ..planner import Planner, TrajectoryPlannerV1, TrajectoryPlannerV2
 from ..planner import TrajectoryPlannerParams
 
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class DefaultSimulationParameters:
     t_start = 0.1
-    t_end  = 50
+    t_end  = 10
     dt     = 0.1
     robot_pose = np.array([0.0, 0.0, 0.0])
     p_start   = np.array([0.0, 0.0])
@@ -36,7 +36,7 @@ class DefaultSimulationParameters:
 
     ## planner 
 
-    GLOBAL_D_T = 0.05
+    GLOBAL_D_T = 0.1
     MAX_ROAD_WIDTH = 2.45 # maximum road width [m]
     D_ROAD_W = 0.6 # road width sampling length [m]
     T_0 = 0  # initial time [s]
@@ -125,7 +125,7 @@ class SimulationConfiguration:
 
     def get_planner(self) -> Planner:
         if self.planner is None:
-            return TrajectoryPlannerV2(TrajectoryPlannerParams())
+            return TrajectoryPlannerV1(TrajectoryPlannerParams())
         else:
             return self.planner
     
