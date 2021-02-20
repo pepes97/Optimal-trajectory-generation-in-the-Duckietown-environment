@@ -11,3 +11,4 @@ from .test_sensor import test_proximity_sensor
 from .test_plot import test_plot_unicycle
 from .test_obstacle import test_obstacles, test_obstacles_moving
 from .config import DefaultSimulationParameters 
+from .test_planner import test_planner

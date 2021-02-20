@@ -26,6 +26,7 @@ TEST_MAP = {
     'bot' : test_bot,
     'plot_unicycle' : test_plot_unicycle,
     'obstacles' : test_obstacles_moving,
+    'planner': test_planner
 }
 
 def handle_parser(args):

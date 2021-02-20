@@ -7,7 +7,9 @@ from ..platform import Unicycle
 from ..trajectory import Trajectory, QuinticTrajectory2D
 from ..transform import FrenetTransform, FrenetGNTransform
 from ..controller import Controller, FrenetIOLController
-from ..planner import TrajectoryPlanner, Planner
+from ..planner import Planner, TrajectoryPlannerV2
+from ..planner import TrajectoryPlannerParams
+
 
 logger = logging.getLogger(__name__)
 
@@ -123,9 +125,7 @@ class SimulationConfiguration:
 
     def get_planner(self) -> Planner:
         if self.planner is None:
-            return TrajectoryPlanner(dsp.GLOBAL_D_T, dsp.K_J, dsp.K_T, dsp.K_D, dsp.K_S, dsp.K_DOT_S, 
-                                     dsp.K_LONG, dsp.K_LAT, dsp.DES_SPEED, dsp.MAX_ROAD_WIDTH, dsp.D_ROAD_W,
-                                     dsp.MIN_T,dsp.MAX_T, dsp.D_T, dsp.D_D_S, dsp.N_S_SAMPLE, dsp.LOW_SPEED_THRESH)
+            return TrajectoryPlannerV2(TrajectoryPlannerParams())
         else:
             return self.planner
     

@@ -2,6 +2,6 @@
 Planner package initializer
 """
 
-from .trajectory_planner import TrajectoryPlanner, TrajectoryPlannerParams, TrajectoryPlannerDefaultParams
+from .trajectory_planner import TrajectoryPlannerV2, TrajectoryPlannerParams, TrajectoryPlannerDefaultParams
 from .planner import Planner 
 from .frenet import Frenet

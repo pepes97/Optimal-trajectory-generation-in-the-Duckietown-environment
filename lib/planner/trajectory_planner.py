@@ -180,16 +180,25 @@ class TrajectoryPlanner(Planner):
         return self.opt_path_tot
 
 class TrajectoryPlannerDefaultParams:
-    dt = 0.1
+    dt = 0.8
     kj = 1
     ks = 1
     kd = 1
+    kdot_s = 1
     klong = 1
     klat  = 1
-    desired_speed = 1
-    road_width = 1
+    delta_t = 0.05
+    desired_speed = 5
+    max_road_width = 2.45
     min_t = 0.
-    max_t = 10.
+    max_t = 0.9
+    d_road_width = 0.6
+    d_d_s = 1
+    low_speed_threshold = 2
+    s_threshold = 1
+    target_distance = 1
+    num_sample = 3
+    
 
 tpdp = TrajectoryPlannerDefaultParams
 
@@ -197,17 +206,27 @@ class TrajectoryPlannerParams:
     """ Container for TrajectoryPlanner parameters
     """
     def __init__(self, *args, **kwargs):
-        self.dt = ... # Sampling time interval
-        self.kj = ... # Cost term for jerk
-        self.ks = ... # Cost term for longitudinal displacement
-        self.kd = ... # Cost term for lateral displacement
-        self.klong = ... # Cost term for longitudinal trajectory
-        self.klat  = ... # Cost term for lateral trajectory
+        self.dt = tpdp.dt # Sampling time interval
+        self.kj = tpdp.kj # Cost term for jerk
+        self.ks = tpdp.ks # Cost term for longitudinal displacement
+        self.kd = tpdp.kd # Cost term for lateral displacement
+        self.klong = tpdp.klong # Cost term for longitudinal trajectory
+        self.kdot_s = tpdp.kdot_s # Cost term for velocity keeping (longitudinal trajectory)
+        self.klat  = tpdp.klat # Cost term for lateral trajectory
         
-        self.desired_speed = ... # Desired speed
-        self.road_width = ...    # Maximum road width
-        self.min_t = ... # Minimum time displacement
-        self.max_t = ... # Maximum time displacement       
+        self.delta_t = tpdp.delta_t 
+        self.desired_speed = tpdp.desired_speed # Desired speed
+        self.max_road_width = tpdp.max_road_width    # Maximum road width
+        self.d_road_width = tpdp.d_road_width # step road width
+        self.d_d_s = tpdp.d_d_s # step s longitunal trajectory
+        self.min_t = tpdp.max_t # Minimum time displacement
+        self.max_t = tpdp.min_t # Maximum time displacement       
+        self.low_speed_threshold = tpdp.low_speed_threshold # threshold for low speed trajectory
+        self.target_distance = tpdp.target_distance # distance for following, merging ad stopping trajectory
+        self.num_sample = tpdp.num_sample # num sample si_interval (target) and di_interval (without target)
+        self.s_target = None
+        self.num_replan = 0
+        
         self.__dict__.update(kwargs)
         ...
     def dict(self):
@@ -217,13 +236,14 @@ class TrajectoryPlannerV2(Planner):
     def __init__(self, *args, **kwargs):
         # Load parameters if TrajectoryPlannerParams object is passed
         if args is not None and len(args) > 0:
-            if isinstance(args[0]) == TrajectoryPlannerParams:
+            if isinstance(args[0], TrajectoryPlannerParams):
                 self.__dict__.update(args[0].__dict__)
         # Load parameters passed via arguments
         if kwargs is not None:
             self.__dict__.update(kwargs)
+        print(self.__dict__)
 
-    def step(self, *args, **kwargs) -> np.array:
+    def step(self, t, robot_pose=None, robot_dpose=None, robot_ddpose=None, *args, **kwargs) -> np.array:
         """ Returns the frenet target position at time t
         """
         logger.error('Function not implemented yet')
@@ -234,26 +254,41 @@ class TrajectoryPlannerV2(Planner):
         # Sample trajectory at the current time
         # return sample
         # TODO(Take requirements for obstacle avoidance into account)
-        return np.zeros((2, ))
+        
+        if t > self.num_replan*self.max_t-1:
+            # TODO replanning
+            if self.num_replan == 0:
+                s0 = np.array([robot_pose[0],robot_dpose[0],robot_ddpose[0]])
+                d0 = np.array([robot_pose[1],robot_dpose[1],robot_ddpose[1]])
+                self.optimal_candidate= self.__generate_optimal_candidate(s0,d0, t)
+                return s0,d0
+            else:
+                s,d = self.replan(t)
+            self.num_replan +=1
+        else:
+            s,d = self.optimal_at_time(t, self.optimal_candidate)
+            return s,d
 
-    def replan(self, t_replan: float, robot_fpose: np.array, robot_dfpose: np.array):
+    def replan(self, t_replan: float):
         """ Apply a replanning step to generate new possible trajectories
         """
         # TODO
         self.t_start = t_replan
-        self.robot_fpose = robot_fpose
-        self.robot_dfpose = robot_dfpose
         # Regenerate optimal path
-        self.optimal_candidate = self.__generate_optimal_candidate()
+        s,d = self.optimal_at_time(t_replan, self.optimal_candidate)
+        self.optimal_candidate = self.__generate_optimal_candidate(s,d, t_replan)
+        return self.s, self.d
 
     # Define inner path candidate
     class PathCandidate:
         """ Object that represent a path candidate. 
         Contains costs term and trajectory"""
         def __init__(self, *args, **kwargs):
-            self.trajectory = None
-            self.cd = 0. # Lateral cost
-            self.cv = 0. # TODO
+            self.longitudinal_trajectory = None
+            self.lateral_trajectory = None
+            self.cd = 0. # Longitudinal cost
+            self.cv = 0. # Lateral cost
+            self.ctot = 0 # Longitudinal + Lateral cost 
 
     def __generate_lateral_candidates(self, p: np.array, *args, **kwargs) -> [PathCandidate]:
         """ Generates lateral PathCandidate(s)
@@ -289,22 +324,89 @@ class TrajectoryPlannerV2(Planner):
         return candidate_lst
 
     @timeprofiledecorator
-    def __generate_optimal_candidate(self):
+    def __generate_optimal_candidate(self, s:np.array, p:np.array, t: float, dd: float = 0)-> [PathCandidate]:
         """ Generate range polynomials for both longitudinal and lateral components, then search for
         the minimum cost one
         """
+        self.s = s
+        self.d = p
+        self.dd = dd
+        self.t_start = t
+
+        candidates = self._generate_candidates()
+        self.optimal_candidate = min(candidates, key=attrgetter('ctot')); # store the best path minimize total cost
+        return self.optimal_candidate
+
+    @timeprofiledecorator
+    def _generate_candidates(self):
+        """ Generate all possible candidates
+        """
+        self.di_interval = (-self.max_road_width,self.max_road_width,self.d_road_width) # Interval expressed as tuple (D_min, D_max, delta_d)
+        self.t_interval = (self.min_t+self.t_start,self.max_t+self.t_start,self.dt) # Interval expressed as tuple (T_min, T_max, delta_t)
+        self.si_interval = (round(-self.d_d_s*self.num_sample),round(+self.d_d_s*self.num_sample+self.d_d_s),self.d_d_s)
+        self.dsi_interval = (round(self.s[1]-self.d_d_s*self.num_sample),round(self.s[1]+self.d_d_s*self.num_sample+self.d_d_s),self.d_d_s) # Interval expressed as tuple (dsd - delta_dsi, dsd + delta_dsi, delta_s)
+
+        if self.s_target != None:
+            long_interval = np.arange(self.si_interval[0], self.si_interval[1], self.si_interval[2])
+        else:
+            long_interval = np.arange(self.dsi_interval[0], self.dsi_interval[1], self.dsi_interval[2])
         
-        def _generate_candidates(self):
-            """ Generate all possible candidates
-            """
-            for target_t in range(np.arange(0.0, self.max_t)):
-                # for target_s in ROBA_S
-                #     # generate candidate_s
-                #     # for target_d in ROBA_D
-                #     #      # generate candidate_d
-                #     #      # do magic merging
-                ...
-            return None
-            # TODO
-        # TODO
-        return None
+        candidate_lst = []
+        for si_dsi in long_interval:
+            
+            ## Longitudinal trajectory
+            for tj in np.arange(self.t_interval[0], self.t_interval[1], self.t_interval[2]):
+                # Path candidate
+                candidate = PathCandidate()
+                # with target  
+                if self.s_target != None:
+                    # TODO  
+                    ...
+                else:
+                    path_long = candidate.longitudinal_trajectory = QuarticPolynomial(self.s[0], self.s[1], self.s[2], si_dsi, 0.0, tj)
+                    s1 = path_long.compute_pt(tj)
+                    s0 = path_long.compute_pt(self.t_start)
+                    dot_s1 = path_long.compute_first_derivative(tj)
+                    ddot_s1 = np.true_divide(np.power(path.compute_second_derivative(tj), 3), 3)
+                    ddot_s0 = np.true_divide(np.power(path.compute_second_derivative(self.t_start), 3), 3)
+                    squared_jerklong = ddot_s1 - ddot_s0
+                    # longitudinal cost (velocity keeping)
+                    C_long = candidate.cv = self.kj * squared_jerklong + self.kt * tj + self.kdots * (dot_s1 - self.desired_speed) ** 2 
+                S = abs(s1 - self.s[0])
+                for di in np.arange(self.di_interval[0], self.di_interval[1], self.di_interval[2]):
+                    candidate_d = copy.deepcopy(candidate)
+                    # low speed
+                    if self.s[1] < self.low_speed_threshold: 
+                        # if S>dsp.S_THRSH:
+                        path = candidate_d.lateral_trajectory = QuinticPolynomial(self.d[0], self.d[1], self.d[2], di, 0.0, 0.0, S)
+                        ddot_d1 = np.true_divide(np.power(path.compute_second_derivative(abs(s1-self.s[0])), 3), 3)
+                        ddot_d0 = np.true_divide(np.power(path.compute_second_derivative(abs(s0-self.s[0])), 3), 3) 
+                        squared_jerk = ddot_d1-ddot_d0  
+                        C_lat = candidate_d.cd = self.kj * squared_jerk + self.kt * S + self.kd * (di-self.dd) ** 2 # Compute longitudinal cost low speed
+                        candidate_d.ctot = self.klat * C_lat + self.klong * C_long
+                        candidate_lst.append(candidate_d)
+                    # High speed
+                    else:
+                        path = candidate_d.lateral_trajectory = QuinticPolynomial(self.d[0], self.d[1], self.d[2], di, 0.0, 0.0, tj)
+                        ddot_d1 = np.true_divide(np.power(path.compute_second_derivative(tj), 3), 3)
+                        ddot_d0 = np.true_divide(np.power(path.compute_second_derivative(self.t_start), 3), 3) 
+                        squared_jerk = ddot_d1-ddot_d0 
+                        C_lat = candidate_d.cd = self.kj * squared_jerk + self.kt * tj + self.kd * (di-self.dd) ** 2 # Compute longitudinal cost
+                        candidate_d.ctot = self.klat * C_lat + self.klong * C_long
+                        candidate_lst.append(f)
+            
+        return candidate_lst
+    
+    def optimal_at_time(self, time : float, opt_path: PathCandidate):
+        lateral_trajectory = opt_path.lateral_trajectory
+        longitudinal_trajectory = opt_path.longitudinal_trajectory
+        # s coordinate frenet
+        s = lateral_trajectory.compute_pt(time)
+        dot_s = lateral_trajectory.compute_first_derivative(time)
+        ddot_s = lateral_trajectory.compute_second_derivative(time)
+        # d coordinate frenet
+        d = longitudinal_trajectory.compute_pt(time)
+        dot_d = longitudinal_trajectory.compute_first_derivative(time)
+        ddot_d = longitudinal_trajectory.compute_second_derivative(time)
+        return np.array([s,dot_s, ddot_s]), np.array([d,dot_d,ddot_d])
+        
