@@ -115,7 +115,7 @@ def test_plot_planner(*args, **kwargs):
     # Extract key objects from configuration object
     t_vect, robot, trajectory, transformer, controller, planner = sim_config.get_elements()
 
-    robot.set_initial_pose(np.array([15, -8, 0.0]))
+    robot.set_initial_pose(np.array([0, -4, 0.0]))
     robot_p = robot.p
     robot_dp = np.zeros(3)
     robot_ddp = np.zeros(3)
@@ -127,8 +127,8 @@ def test_plot_planner(*args, **kwargs):
     robot_fpose = np.array([est_pt, robot_fpose[1], robot_fpose[2]])
     robot_fdp = transformer.transform(robot_dp)[:2]
     robot_fddp = transformer.transform(robot_ddp)[:2]
-    s0 = (robot_fpose[0],robot_fdp[0],robot_fddp[0])
-    d0 = (robot_fpose[1],robot_fdp[1],robot_fddp[1])
+    s0 = (robot_fpose[0],0,0)
+    d0 = (robot_fpose[1],0,0)
     planner.initialize(t0 = t_vect[0], p0 = d0, s0 = s0)
     opt_traj = np.zeros((2, 50))
     def compute_ortogonal_vect(traj, s):
