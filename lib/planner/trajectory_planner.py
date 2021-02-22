@@ -181,10 +181,10 @@ class TrajectoryPlanner(Planner):
 
 class TrajectoryPlannerDefaultParams:
     dt = 1
-    kj = 0.1
+    kj = 0.001
     ks = 0.1
-    kd = 0.5
-    kt = 0.1
+    kd = 0.9
+    kt = .01
     kdots = 1
     klong = 1
     klat  = 1

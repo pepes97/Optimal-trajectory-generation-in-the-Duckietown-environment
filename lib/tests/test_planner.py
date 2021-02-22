@@ -99,7 +99,7 @@ def _simulate_experiment(sim_config, data_storage, trajectory, robot, transforme
         old_s = pos_s
         
         # Set error on s to 0 (TEST)
-        # error[0] = 0.0
+        error[0] = 0.0
         derror = target_fdpos - robot_fdp
         #print(pos_s, pos_d)
         # Get path curvature at estimate
