@@ -25,6 +25,7 @@ TEST_MAP = {
     'config_generator' : test_generate_configurations,
     'bot' : test_bot,
     'plot_unicycle' : test_plot_unicycle,
+    'plot_planner'  : test_plot_planner,
     'obstacles' : test_obstacles_moving,
     'planner': test_planner
 }

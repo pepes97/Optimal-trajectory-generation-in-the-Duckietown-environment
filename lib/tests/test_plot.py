@@ -103,3 +103,58 @@ def __simulate_experiment(sim_config, data_storage, trajectory, robot, transform
         data_storage.set('robot_pose', robot_p, i)
     return data_storage
 
+def test_plot_planner(*args, **kwargs):
+    plot_flag = False
+    store_plot = None
+    if 'plot' in kwargs:
+        plot_flag = kwargs['plot']
+    if 'store_plot' in kwargs:
+        store_plot = kwargs['store_plot']
+
+    sim_config = SimulationConfiguration(**kwargs)
+    # Extract key objects from configuration object
+    t_vect, robot, trajectory, transformer, controller, planner = sim_config.get_elements()
+
+    robot.set_initial_pose(np.array([15, -8, 0.0]))
+    robot_p = robot.p
+    robot_dp = np.zeros(3)
+    robot_ddp = np.zeros(3)
+    robot_fdp = np.zeros(3)
+    robot_fddp = np.zeros(3)
+    # One simulation loop
+    est_pt = transformer.estimatePosition(trajectory, robot_p)
+    robot_fpose = transformer.transform(robot_p)
+    robot_fpose = np.array([est_pt, robot_fpose[1], robot_fpose[2]])
+    robot_fdp = transformer.transform(robot_dp)[:2]
+    robot_fddp = transformer.transform(robot_ddp)[:2]
+    s0 = (robot_fpose[0],robot_fdp[0],robot_fddp[0])
+    d0 = (robot_fpose[1],robot_fdp[1],robot_fddp[1])
+    planner.initialize(t0 = t_vect[0], p0 = d0, s0 = s0)
+    opt_traj = np.zeros((2, 50))
+    def compute_ortogonal_vect(traj, s):
+        t_grad = traj.compute_first_derivative(s)
+        t_r = np.arctan2(t_grad[1], t_grad[0])
+        return np.array([-np.sin(t_r), np.cos(t_r)])
+    for i in range(50):
+        target_s, target_d = planner.replanner(t_vect[i])
+        ts, ds = target_s[0], target_d[0]
+        print(ts, ds)
+        target_glob = trajectory.compute_pt(ts) + compute_ortogonal_vect(trajectory, ts) * ds
+        #target_frenet = np.array([ts, ds])
+        #target_glob = transformer.itransform(target_frenet)
+        opt_traj[:, i]= target_glob
+        
+    def __plot_fn(store: str=None):
+        fig, ax = generate_1_1_layout()
+        traj_line = plot_trajectory(ax, trajectory, t_vect)
+        robot_poly = plot_unicycle(ax, robot)
+        opt_traj_line, = ax.plot(opt_traj[0, :], opt_traj[1, :], 'g')
+        ax.scatter(transformer.t_vect[0], transformer.t_vect[1])
+        # TODO
+        if store is not None:
+            plt.savefig(store)
+        plt.show()
+
+    if plot_flag:
+        __plot_fn(store_plot)
+    return None
