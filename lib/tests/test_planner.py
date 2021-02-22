@@ -87,8 +87,12 @@ def _simulate_experiment(sim_config, data_storage, trajectory, robot, transforme
         target_fpos = np.array([pos_s[0]-old_s[0], pos_d[0]-old_d[0]])
         target_fdpos = np.array([pos_s[1]-old_s[1], pos_d[1]-old_d[1]])
         error = target_fpos - robot_fpose[0:2]
+        print(pos_s[0]-old_s[0], pos_d[0]-old_d[0])
+        old_d = pos_d
+        old_s = pos_s
+        
         # Set error on s to 0 (TEST)
-        error[0] = 0.0
+        # error[0] = 0.0
         derror = target_fdpos - robot_fdp
         #print(pos_s, pos_d)
         # Get path curvature at estimate
