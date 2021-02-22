@@ -26,6 +26,7 @@ def plot_2d_simulation(data: SimulationDataStorage) -> plt.Figure:
     ax0.plot(target_traj[0, :], target_traj[1, :], label='Path')
     ax0.plot(robot_traj[0, :], robot_traj[1, :], label='Robot path')
 
+    """
     # Plot on the second row, frenet coordinates evolution
     robot_fpose = data.get(SimData.robot_frenet_pose)
     ax1_0 = fig.add_subplot(gs[1, 0])
@@ -38,19 +39,46 @@ def plot_2d_simulation(data: SimulationDataStorage) -> plt.Figure:
     ax1_1.set_xlabel('t')
     ax1_1.set_ylabel('d')
     ax1_1.plot(t, robot_fpose[1, :])
+    """
+    # Plot on the second row, frenet errors
+    error = data.get(SimData.error)
+    ax2_0 = fig.add_subplot(gs[1, 0])
+    ax2_0.set_title('error_s(t)')
+    ax2_0.set_xlabel('t')
+    ax2_0.set_ylabel('s')
+    ax2_0.plot(t, error[0, :])
+    ax2_1 = fig.add_subplot(gs[1, 1])
+    ax2_1.set_title('error_d(t)')
+    ax2_1.set_xlabel('t')
+    ax2_1.set_ylabel('d')
+    ax2_1.plot(t, error[1, :])
 
+    """
     # Plot on third row, frenet errors
     error = data.get(SimData.error)
     ax2_0 = fig.add_subplot(gs[2, 0])
     ax2_0.set_title('error_s(t)')
     ax2_0.set_xlabel('t')
     ax2_0.set_ylabel('s')
-    ax2_0.plot(t, robot_fpose[0, :])
+    ax2_0.plot(t, error[0, :])
     ax2_1 = fig.add_subplot(gs[2, 1])
     ax2_1.set_title('error_d(t)')
     ax2_1.set_xlabel('t')
     ax2_1.set_ylabel('d')
-    ax2_1.plot(t, robot_fpose[1, :])
+    ax2_1.plot(t, error[1, :])
+    """
+    # Plot on third row, frenet derrors
+    derror = data.get(SimData.derror)
+    ax2_0 = fig.add_subplot(gs[2, 0])
+    ax2_0.set_title('derror_s(t)')
+    ax2_0.set_xlabel('t')
+    ax2_0.set_ylabel('s')
+    ax2_0.plot(t, derror[0, :])
+    ax2_1 = fig.add_subplot(gs[2, 1])
+    ax2_1.set_title('derror_d(t)')
+    ax2_1.set_xlabel('t')
+    ax2_1.set_ylabel('d')
+    ax2_1.plot(t, derror[1, :])
 
     # Plot on fourth row, control terms
     u = data.get(SimData.control)
