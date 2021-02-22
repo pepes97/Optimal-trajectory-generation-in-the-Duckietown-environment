@@ -58,6 +58,10 @@ def _simulate_experiment(sim_config, data_storage, trajectory, robot, transforme
     robot_dp = np.zeros(3)
     robot_ddp = np.zeros(3)
     u = np.zeros(2)
+    
+    old_s = (0,0)
+    old_d = (0,0)
+    
     for i in range(sim_config.get_simulation_length()):
         # Estimate frenet frame
         est_pt = transformer.estimatePosition(trajectory, robot_p)
@@ -74,20 +78,23 @@ def _simulate_experiment(sim_config, data_storage, trajectory, robot, transforme
         # target_dpos = trajectory.compute_first_derivative(t_vect[i])
         # target_fdpos = transformer.transform(target_dpos)
         if i == 0:
-            old_s = (0,0)
-            old_d = (0,0)
             s0 = (robot_fpose[0],robot_fdp[0],robot_fddp[0])
             d0 = (robot_fpose[1],robot_fdp[1],robot_fddp[1])
             planner.initialize(t0 = t_vect[i], p0 = d0, s0 = s0)
             pos_s, pos_d = planner.s0, planner.p0
         else:
             pos_s, pos_d = planner.replanner(t_vect[i])
-            
-        target_pos = transformer.itransform(np.array([pos_s[0]-old_s[0], pos_d[0]-old_d[0]]))
-        target_fpos = np.array([pos_s[0]-old_s[0], pos_d[0]-old_d[0]])
-        target_fdpos = np.array([pos_s[1]-old_s[1], pos_d[1]-old_d[1]])
+        
+        d_pos_s = (pos_s[0]-old_s[0], pos_s[1]-old_s[1])
+        d_pos_d = (pos_d[0]-old_d[0], pos_d[1]-old_d[1])
+        
+        target_pos = transformer.itransform(np.array([d_pos_s[0], d_pos_d[0]]))
+        target_fpos = np.array([d_pos_s[0], d_pos_d[0]])
+        target_fdpos = np.array([d_pos_s[1], d_pos_d[1]])
         error = target_fpos - robot_fpose[0:2]
-        print(pos_s[0]-old_s[0], pos_d[0]-old_d[0])
+        
+        print(d_pos_s, d_pos_d)
+        
         old_d = pos_d
         old_s = pos_s
         
