@@ -423,7 +423,8 @@ class TrajectoryPlannerV1(Planner):
         # Load parameters passed via arguments
         if kwargs is not None:
             self.__dict__.update(kwargs)
-        print(self.__dict__)
+
+        #print(self.__dict__)
         
     def step(self, t: float, dd: float = None, dsd: float = None, s_target: Frenet = None) -> np.array:
         """ Returns the frenet target position at time t
@@ -460,9 +461,11 @@ class TrajectoryPlannerV1(Planner):
         s0 = self.s0[0]
         ds0 = self.s0[1]
         dds0 = self.s0[2]
+        #print(p0, dp0, ddp0, s0, ds0, dds0)
 
         self.si_interval = (round(-self.d_d_s*self.num_sample),round(+self.d_d_s*self.num_sample+self.d_d_s),self.d_d_s)
         self.dsi_interval = (round(ds0-self.d_d_s*self.num_sample),round(ds0+self.d_d_s*self.num_sample+self.d_d_s),self.d_d_s) # Interval expressed as tuple (dsd - delta_dsi, dsd + delta_dsi, delta_s)
+        #self.dsi_interval = (round(ds0), round(ds0+self.d_d_s*self.num_sample), self.d_d_s)
  
         if self.s_target != None:
             long_interval = np.arange(self.si_interval[0], self.si_interval[1], self.si_interval[2])
