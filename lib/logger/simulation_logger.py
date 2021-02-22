@@ -25,6 +25,7 @@ class SimData:
     point = ('point', 2)
     error = ('error', 2)
     derror = ('derror', 2)
+    #optimal_path = ('optimal_path', 2)
     
 
 class SimulationDataStorage:
