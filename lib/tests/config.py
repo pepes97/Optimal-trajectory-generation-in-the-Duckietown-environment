@@ -25,11 +25,11 @@ class DefaultSimulationParameters:
     dp_end  = np.array([-2.0, 2.0])
     ddp_end = np.array([1.0, -1.0])
     # PD controller parameters
-    kp1     = 2.0
-    kp2     = 2.
-    kd1     = 0.5
-    kd2     = 0.5
-    b       = 1.5
+    kp1     = 15.0
+    kp2     = 10.0
+    kd1     = 1.5
+    kd2     = 1.5
+    b       = 1.
     pf_k2   = 40
     pf_k3   = 1.5
     pf_v    = 0.5
