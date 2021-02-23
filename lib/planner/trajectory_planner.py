@@ -182,16 +182,16 @@ class TrajectoryPlanner(Planner):
 class TrajectoryPlannerDefaultParams:
     dt = 1
     kj = 0.001
-    ks = 0.1
-    kd = 0.9
-    kt = .01
+    ks = 0.5
+    kd = 0.5
+    kt = 0.1
     kdots = 1
     klong = 1
     klat  = 1
     delta_t = 0.1
     desired_speed = 1.5
     max_road_width = 2.5
-    min_t = 1
+    min_t = 0.5
     max_t = 3
     d_road_width = 0.5
     d_d_s = 1
@@ -490,7 +490,7 @@ class TrajectoryPlannerV1(Planner):
                     squared_jerklong = sum(np.power(ft.dddot_s, 2))
                     C_long = ft.ct = self.kj * squared_jerklong + self.kt * tj + self.ks * (ft.s[-1] - st) ** 2 
                 else:
-                    path_long = QuarticPolynomial(s0, ds0, dds0, si_dsi, 0.0, tj) #self.dsd +
+                    path_long = QuarticPolynomial(s0, ds0, dds0, si_dsi, 0.0, tj)
                     ft.t = [t for t in np.arange(0, tj+self.delta_t, self.delta_t)]
                     ft.s = [path_long.compute_pt(t) for t in ft.t]
                     ft.dot_s = [path_long.compute_first_derivative(t) for t in ft.t]
@@ -511,10 +511,6 @@ class TrajectoryPlannerV1(Planner):
                         squared_jerk = sum(np.power(f.dddot_d, 2))
                         C_lat = f.cd = self.kj * squared_jerk + self.kt * S + self.kd * (di-self.dd) ** 2 # Compute longitudinal cost low speed
                         f.ctot = self.klat * C_lat + self.klong * C_long
-                        # Transform f.t into real time coordinates
-                        for i in range(len(f.t)):
-                            f.t[i] += self.t_initial
-                        frenet_paths.append(f)
                     else: # high speed
                         path = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, tj)
                         f.d = [path.compute_pt(t) for t in f.t]
@@ -525,9 +521,9 @@ class TrajectoryPlannerV1(Planner):
                         C_lat = f.cd = self.kj * squared_jerk + self.kt * tj + self.kd * (di-self.dd) ** 2 # Compute longitudinal cost
                         f.ctot = self.klat * C_lat + self.klong * C_long
                         # Transform f.t into real time coordinates
-                        for i in range(len(f.t)):
-                            f.t[i] += self.t_initial
-                        frenet_paths.append(f)
+                    for i in range(len(f.t)):
+                        f.t[i] += self.t_initial
+                    frenet_paths.append(f)
         return frenet_paths
 
     def optimal_at_time(self, time, opt_path, type_path) -> (float, float, float):

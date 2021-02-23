@@ -180,18 +180,23 @@ def __simulate_experiment_planner(sim_config, data_storage, trajectory, robot, t
     s0 = (robot_fpose[0],0,0)
     d0 = (robot_fpose[1],0,0)
     planner.initialize(t0 = t_vect[0], p0 = d0, s0 = s0)
-    opt_traj = np.zeros((2, 500))
+    opt_traj = np.zeros((2, len(t_vect)))
     def compute_ortogonal_vect(traj, s):
         t_grad = traj.compute_first_derivative(s)
         t_r = np.arctan2(t_grad[1], t_grad[0])
         return np.array([-np.sin(t_r), np.cos(t_r)])
-    for i in range(500):
+    
+    for i in range(len(t_vect)):
         est_pt = transformer.estimatePosition(trajectory, robot_p)
         robot_fpose = transformer.transform(robot_p)
         robot_fdp = transformer.transform(robot_dp)[:2]
         robot_fddp = transformer.transform(robot_ddp)[:2]
         # Replanning
-        target_s, target_d = planner.replanner(t_vect[i])
+
+        dsd = (t_vect[i+1]-t_vect[i])/sim_config.dt if i+1<len(t_vect) else 0.0
+
+        target_s, target_d = planner.replanner(t_vect[i],dsd=dsd) 
+
         ts, ds = target_s[0], target_d[0]
         dst = dds = target_s[1], target_d[1]
         target_glob = trajectory.compute_pt(ts) + compute_ortogonal_vect(trajectory, ts) * ds
