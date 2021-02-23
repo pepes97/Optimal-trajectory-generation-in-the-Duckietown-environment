@@ -502,33 +502,32 @@ class TrajectoryPlannerV1(Planner):
                 for di in np.arange(self.di_interval[0], self.di_interval[1], self.di_interval[2]):
                     f = copy.deepcopy(ft)
                     # Fill Frenet class for d
-                    # if ds0 < self.low_speed_threshold: # low speed
-                    #     # if S>cfg.S_THRSH:
-                    #     path = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, S)
-                    #     f.d = [path.compute_pt(abs(s-s0)) for s in f.s]
-                    #     f.dot_d = [path.compute_first_derivative(abs(s-s0)) for s in f.s]
-                    #     f.ddot_d = [path.compute_second_derivative(abs(s-s0)) for s in f.s]
-                    #     f.dddot_d = [path.compute_third_derivative(abs(s-s0)) for s in f.s]
-                    #     squared_jerk = sum(np.power(f.dddot_d, 2))
-                    #     C_lat = f.cd = self.kj * squared_jerk + self.kt * S + self.kd * (di-self.dd) ** 2 # Compute longitudinal cost low speed
-                    #     f.ctot = self.klat * C_lat + self.klong * C_long
-                    #     # Transform f.t into real time coordinates
-                    #     for i in range(len(f.t)):
-                    #         f.t[i] += self.t_initial
-                    #     frenet_paths.append(f)
-                    # else: # high speed
-                    path = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, tj)
-                    f.d = [path.compute_pt(t) for t in f.t]
-                    f.dot_d = [path.compute_first_derivative(t) for t in f.t]
-                    f.ddot_d = [path.compute_second_derivative(t) for t in f.t]
-                    f.dddot_d = [path.compute_third_derivative(t) for t in f.t]
-                    squared_jerk = sum(np.power(f.dddot_d, 2))
-                    C_lat = f.cd = self.kj * squared_jerk + self.kt * tj + self.kd * (di-self.dd) ** 2 # Compute longitudinal cost
-                    f.ctot = self.klat * C_lat + self.klong * C_long
-                    # Transform f.t into real time coordinates
-                    for i in range(len(f.t)):
-                        f.t[i] += self.t_initial
-                    frenet_paths.append(f)
+                    if ds0 < self.low_speed_threshold and S>0: # low speed
+                        path = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, S)
+                        f.d = [path.compute_pt(abs(s-s0)) for s in f.s]
+                        f.dot_d = [path.compute_first_derivative(abs(s-s0)) for s in f.s]
+                        f.ddot_d = [path.compute_second_derivative(abs(s-s0)) for s in f.s]
+                        f.dddot_d = [path.compute_third_derivative(abs(s-s0)) for s in f.s]
+                        squared_jerk = sum(np.power(f.dddot_d, 2))
+                        C_lat = f.cd = self.kj * squared_jerk + self.kt * S + self.kd * (di-self.dd) ** 2 # Compute longitudinal cost low speed
+                        f.ctot = self.klat * C_lat + self.klong * C_long
+                        # Transform f.t into real time coordinates
+                        for i in range(len(f.t)):
+                            f.t[i] += self.t_initial
+                        frenet_paths.append(f)
+                    else: # high speed
+                        path = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, tj)
+                        f.d = [path.compute_pt(t) for t in f.t]
+                        f.dot_d = [path.compute_first_derivative(t) for t in f.t]
+                        f.ddot_d = [path.compute_second_derivative(t) for t in f.t]
+                        f.dddot_d = [path.compute_third_derivative(t) for t in f.t]
+                        squared_jerk = sum(np.power(f.dddot_d, 2))
+                        C_lat = f.cd = self.kj * squared_jerk + self.kt * tj + self.kd * (di-self.dd) ** 2 # Compute longitudinal cost
+                        f.ctot = self.klat * C_lat + self.klong * C_long
+                        # Transform f.t into real time coordinates
+                        for i in range(len(f.t)):
+                            f.t[i] += self.t_initial
+                        frenet_paths.append(f)
         return frenet_paths
 
     def optimal_at_time(self, time, opt_path, type_path) -> (float, float, float):

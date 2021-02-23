@@ -130,15 +130,15 @@ def test_plot_planner(*args, **kwargs):
     s0 = (robot_fpose[0],0,0)
     d0 = (robot_fpose[1],0,0)
     planner.initialize(t0 = t_vect[0], p0 = d0, s0 = s0)
-    opt_traj = np.zeros((2, 50))
+    opt_traj = np.zeros((2, 100))
     def compute_ortogonal_vect(traj, s):
         t_grad = traj.compute_first_derivative(s)
         t_r = np.arctan2(t_grad[1], t_grad[0])
         return np.array([-np.sin(t_r), np.cos(t_r)])
-    for i in range(50):
+    for i in range(100):
         target_s, target_d = planner.replanner(t_vect[i])
         ts, ds = target_s[0], target_d[0]
-        print(ts, ds)
+        print(target_s, target_d)
         target_glob = trajectory.compute_pt(ts) + compute_ortogonal_vect(trajectory, ts) * ds
         #target_frenet = np.array([ts, ds])
         #target_glob = transformer.itransform(target_frenet)
