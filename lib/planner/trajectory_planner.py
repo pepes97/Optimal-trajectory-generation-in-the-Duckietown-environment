@@ -184,14 +184,14 @@ class TrajectoryPlannerDefaultParams:
     kj = 0.001
     ks = 0.5
     kd = 0.5
-    kt = 0.1
+    kt = 0.01
     kdots = 1
     klong = 1
     klat  = 1
     delta_t = 0.1
-    desired_speed = 5
+    desired_speed = 1.5
     max_road_width = 2.5
-    min_t = 0.5
+    min_t = 1
     max_t = 3
     d_road_width = 0.5
     d_d_s = 1

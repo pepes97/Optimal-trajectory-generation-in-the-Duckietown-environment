@@ -130,7 +130,7 @@ def compute_unicycle_vertices(rpose: np.array):
     """
     # Generate local triangle polygon
     #local_poly_vertex = np.array([[-0.3, -0.6], [0., 0.5], [0.3, -0.6]])
-    local_poly_vertex = np.array([[-0.9, -0.5], [1, 0], [-0.9, 0.5]])
+    local_poly_vertex = np.array([[-0.3, -0.3], [0.3, 0], [-0.3, 0.3]])
     # Generate homogeneous transformation to rpose
     R, t = homogeneous_transform(rpose)
     def apply_transform(row):
