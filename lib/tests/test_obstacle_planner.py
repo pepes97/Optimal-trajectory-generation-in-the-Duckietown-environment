@@ -114,7 +114,7 @@ def __simulate_experiment(sim_config, data_storage, trajectory, robot, transform
         
     return data_storage
 
-
+@timeprofiledecorator
 def test_planner_obstacle(*args, **kwargs):
     plot_flag = False
     store_plot = None
@@ -164,7 +164,7 @@ def test_planner_obstacle(*args, **kwargs):
 
     data_storage = __simulate_experiment(sim_config, data_storage, trajectory,
                                         robot, transformer, controller, planner, sensor)
-
+    @timeprofiledecorator
     def __plot_fn(store: str=None):
         fig = plot_2d_planner_obstacles_anim(data_storage, trajectory,robot, sensor, obstacle_lst, t_vect)
         if store is not None:

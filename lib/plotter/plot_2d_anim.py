@@ -122,7 +122,7 @@ def plot_2d_planner_obstacles_anim(data_storage:SimulationDataStorage, trajector
     measure_obst = sensor.sense(rpose=rpose[:, 0])
     measure_pts = get_obstacle_coordinates(measure_obst)
     measure_scat = ax.scatter(measure_pts[0, :], measure_pts[1, :], facecolors='none', edgecolors='r')
-    #plot_obstacles(ax, obstacle_lst, c='k', marker='x')
+    plot_obstacles(ax, obstacle_lst, c='k', marker='x')
     # Animation callback
     def animate(i):
         # Center camera to robot
@@ -131,7 +131,6 @@ def plot_2d_planner_obstacles_anim(data_storage:SimulationDataStorage, trajector
         ax.figure.canvas.draw()
 
         # Sensor
-        plot_obstacles(ax, obstacle_lst, c='k', marker='x')
         p1, p2 = compute_sensor_vertices(sensor, rpose[:, i])
         sensor_line.set_xdata([p1[0], rpose[0, i], p2[0]])
         sensor_line.set_ydata([p1[1], rpose[1, i], p2[1]])
