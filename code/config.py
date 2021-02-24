@@ -1,5 +1,5 @@
 # Global parameters
-GLOBAL_D_T = 0.05
+GLOBAL_D_T = 0.1
 
 # Parameters
 MAX_ROAD_WIDTH = 2.45 # maximum road width [m]
