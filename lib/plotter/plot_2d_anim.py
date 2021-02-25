@@ -8,6 +8,7 @@ import numpy as np
 from .utils import *
 from ..logger import SimulationDataStorage, SimData
 from ..transform import homogeneous_transform
+from .plot_2d import *
 
 def plot_2d_simulation_anim(data: SimulationDataStorage) -> plt.Figure:
     fig, gs = generate_4_2_layout()
@@ -96,3 +97,54 @@ def plot_2d_bot_anim(data: SimulationDataStorage) -> plt.Figure:
         pass
     pass
     # TODO
+
+def plot_2d_planner_obstacles_anim(data_storage:SimulationDataStorage, trajectory, robot, sensor, obstacle_lst, t_vect) -> plt.Figure:
+    fig, ax = generate_1_1_layout()
+    # Plot trajectory
+    ax.axis('equal')
+    trajectory_line = plot_trajectory(ax, trajectory, t_vect)
+    unicycle_poly   = plot_unicycle(ax, robot)
+    # Extract data from data_storage
+    rpose = data_storage.get(SimData.robot_pose)
+    planner_path = data_storage.get(SimData.planner)
+    planner_line, = ax.plot(planner_path[0, :], planner_path[1, :], 'g')
+    sensor_line   = plot_proximity_sensor(ax, sensor, robot)
+    
+    def get_obstacle_coordinates(obst_lst: [Obstacle]):
+        x_lst = []
+        y_lst = []
+        for o in obst_lst:
+            x_lst.append(o.position[0])
+            y_lst.append(o.position[1])
+        return np.array([x_lst, y_lst])
+
+
+    measure_obst = sensor.sense(rpose=rpose[:, 0])
+    measure_pts = get_obstacle_coordinates(measure_obst)
+    measure_scat = ax.scatter(measure_pts[0, :], measure_pts[1, :], facecolors='none', edgecolors='r')
+    plot_obstacles(ax, obstacle_lst, c='k', marker='x')
+    # Animation callback
+    def animate(i):
+        # Center camera to robot
+        ax.set_xlim(xmin=rpose[0, i] - 5, xmax=rpose[0, i] + 5)
+        ax.set_ylim(ymin=rpose[1, i] - 5, ymax=rpose[1, i] + 5)
+        ax.figure.canvas.draw()
+
+        # Sensor
+        p1, p2 = compute_sensor_vertices(sensor, rpose[:, i])
+        sensor_line.set_xdata([p1[0], rpose[0, i], p2[0]])
+        sensor_line.set_ydata([p1[1], rpose[1, i], p2[1]])
+        # Get new robot vertices
+        unicycle_poly.set_xy(compute_unicycle_vertices(rpose[:, i]))
+        # Plot measure 
+        measure_obst = sensor.sense(rpose=rpose[:, i])
+        logger.debug(f'time_{i}: sensor found {len(measure_obst)} obstacles')
+        measure_pts = get_obstacle_coordinates(measure_obst)
+        measure_scat.set_offsets(np.c_[measure_pts[0, :], measure_pts[1, :]])
+        # Plot next 30 (at most) planner points
+        planner_line.set_xdata(planner_path[0, i:i+30])
+        planner_line.set_ydata(planner_path[1, i:i+30])
+        return [unicycle_poly, planner_line,sensor_line, measure_scat]
+    ani = animation.FuncAnimation(fig, animate, frames=t_vect.shape[0], interval=30, blit=False)
+    plt.show()
+    return fig
