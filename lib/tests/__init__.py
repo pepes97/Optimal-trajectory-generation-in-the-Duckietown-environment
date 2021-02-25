@@ -13,3 +13,4 @@ from .test_obstacle import test_obstacles, test_obstacles_moving
 from .config import DefaultSimulationParameters 
 from .test_planner import test_planner, test_planner_full
 from .test_obstacle_planner import test_planner_obstacle
+from .test_moving_obstacle_planner import test_planner_moving_obstacle

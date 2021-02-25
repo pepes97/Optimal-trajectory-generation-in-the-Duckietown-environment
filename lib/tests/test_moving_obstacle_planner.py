@@ -124,7 +124,7 @@ def __simulate_experiment(sim_config, data_storage, trajectory, robot, transform
     return data_storage
 
 
-def test_planner_obstacle(*args, **kwargs):
+def test_planner_moving_obstacle(*args, **kwargs):
     plot_flag = False
     store_plot = None
     if 'plot' in kwargs:
