@@ -29,7 +29,8 @@ TEST_MAP = {
     'obstacles' : test_obstacles_moving,
     'planner': test_planner,
     'planner_full': test_planner_full,
-    'planner_obstacles': test_planner_obstacle
+    'planner_obstacles': test_planner_obstacle,
+    'planner_moving_obstacles': test_planner_moving_obstacle
 }
 
 def handle_parser(args):

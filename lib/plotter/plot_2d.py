@@ -200,3 +200,17 @@ def plot_obstacles(ax, obstacle_lst: [Obstacle], *args, **kwargs):
     for o in obstacle_lst:
         ax.scatter(o.position[0], o.position[1], **kwargs)
     return None
+
+def plot_moving_obstacle(ax, obstacle):
+    """ Plot on the axis ax a unicycle
+    """
+    if isinstance(obstacle, Obstacle):
+        pose = obstacle.pose
+    elif isinstance(obstacle, np.ndarray):
+        pose = obstacle
+    else:
+        raise ValueError('Obstacle is not an Obstacle object, nor a numpy array')
+    global_poly_vertex = compute_unicycle_vertices(pose)
+    opoly = plt.Polygon(global_poly_vertex, facecolor='black', edgecolor='black', lw=2)
+    ax.add_patch(opoly)
+    return opoly

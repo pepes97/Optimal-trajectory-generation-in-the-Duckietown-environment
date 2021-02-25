@@ -78,3 +78,12 @@ class ProximitySensor(Sensor):
         """ Set the obstacle list which the sensor uses to detect the latter
         """
         self.obstacles = obs_lst
+
+    def step_obstacle(self, time: float):
+        """ Set the obstacle list which the sensor uses to detect the latter
+        """
+        obs_lst = []
+        for obstacle in self.obstacles:
+            obstacle.step(time)
+            obs_lst.append(obstacle)
+        self.obstacles = obs_lst

@@ -6,6 +6,7 @@ from .planner import Planner
 from ..trajectory import QuinticPolynomial, QuarticPolynomial
 from .frenet import Frenet # Still needed ?
 from ..logger import timeprofiledecorator # Profiling wrapper
+from ..sensor import ObstacleTrajectory
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +181,7 @@ class TrajectoryPlanner(Planner):
         return self.opt_path_tot
 
 class TrajectoryPlannerDefaultParams:
-    dt = 1
+    dt = 0.5
     kj = 0.001
     ks = 0.5
     kd = 0.5
@@ -431,13 +432,14 @@ class TrajectoryPlannerV1(Planner):
         """
         pass
         
-    def initialize(self, t0: (float), p0: (float, float, float), s0: (float, float, float), dd: float = 0, dsd: float = 5, s_target: Frenet = None):
+    def initialize(self, t0: (float), p0: (float, float, float), s0: (float, float, float), dd: float = 0, dsd: float = 5, s_target: ObstacleTrajectory = None):
         assert abs(dd)<=self.max_road_width, 'desired offset must be into road limits'
         self.s0 = s0
         self.p0 = p0 # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
         self.s_target = s_target
         self.dd = dd
         self.t_initial = t0
+        self.d_target = 2.
         self.di_interval = (-self.max_road_width,self.max_road_width,self.d_road_width) # Interval expressed as tuple (D_min, D_max, delta_d)
         self.t_interval = (self.min_t,self.max_t,self.dt) # Interval expressed as tuple (T_min, T_max, delta_t)
         self.si_interval = (round(-self.d_d_s*self.num_sample),round(+self.d_d_s*self.num_sample+self.d_d_s),self.d_d_s)
@@ -477,10 +479,11 @@ class TrajectoryPlannerV1(Planner):
                 # Fill Frenet class for s
                 ft = Frenet()
                 if self.s_target != None:
-                    index = round((self.t_initial + tj - self.s_target.t[0])/self.delta_t)
-                    st = self.s_target.s[index]
-                    dst = self.s_target.dot_s[index]
-                    ddst = self.s_target.ddot_s[index]
+                    time = self.t_initial + tj
+                    st = s0 + self.s_target.compute_s(time) - self.d_target + self.delta_t * self.s_target.compute_ds(time)
+                    dst = ds0 + self.s_target.compute_ds(time) - self.delta_t * self.s_target.compute_dds(time)
+                    ddst = dds0 + self.s_target.compute_dds(time) #- self.delta_t * self.s_target.compute_ddds(time)
+                    # print(st,dst,ddst)
                     path_long = QuinticPolynomial(s0, ds0, dds0, st + si_dsi, dst, ddst, tj)
                     ft.t = [t for t in np.arange(0, tj+self.delta_t, self.delta_t)]
                     ft.s = [path_long.compute_pt(t) for t in ft.t]
@@ -540,7 +543,7 @@ class TrajectoryPlannerV1(Planner):
         else:
             return (opt_path.d[index], opt_path.dot_d[index], opt_path.ddot_d[index])
 
-    def replan_ct(self, time: float, s_target: Frenet = None): # replan w.r.t opt_ct
+    def replan_ct(self, time: float, s_target: ObstacleTrajectory = None): # replan w.r.t opt_ct
         self.p0 = self.optimal_at_time(time, self.opt_path_ct, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
         self.s0 = self.optimal_at_time(time, self.opt_path_ct, "s") # Initial step in frenet-frame as tuple (s0, ds0)
         self.t_initial = time
@@ -566,7 +569,7 @@ class TrajectoryPlannerV1(Planner):
         self.opt_path_d = min(self.paths, key=attrgetter('cd'))
         self.opt_path_s = min(self.paths, key=attrgetter('cv'))
 
-    def replanner(self, time: float, dd: float = None, dsd: float = None, s_target: Frenet = None):
+    def replanner(self, time: float, dd: float = None, dsd: float = None, s_target: ObstacleTrajectory = None):
         # in order of priority
         if s_target != None: # follow
             self.s_target = s_target

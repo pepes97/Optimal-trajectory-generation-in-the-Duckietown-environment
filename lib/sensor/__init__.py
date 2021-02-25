@@ -6,6 +6,7 @@ from .sensor import Sensor
 from .proximity_sensor import ProximitySensor
 from .obstacle import Obstacle
 from .static_obstacle import StaticObstacle
+from .dynamic_obstacle import MovingObstacle, ObstacleTrajectory
 
 
 

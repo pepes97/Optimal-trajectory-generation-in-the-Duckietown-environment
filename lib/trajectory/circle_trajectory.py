@@ -74,7 +74,7 @@ class CircleTrajectory2D(Trajectory, DifferentiableFunction):
     def compute_second_derivative(self, t):
         # Possible approach (To Be Verified)
         h = 1e-5
-        ddf = compute_first_derivative(t+h/2) - compute_first_derivative(t-h/2)
+        ddf = self.compute_first_derivative(t+h/2) - self.compute_first_derivative(t-h/2)
         return ddf
         # TODO(Sveva) PS: Secondo me finch'è non ci serve, puoi lasciarla pure cosi
         logger.error('Function not yet implemented')
