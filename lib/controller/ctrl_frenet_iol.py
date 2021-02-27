@@ -2,7 +2,7 @@
 """
 
 from .controller import Controller
-from ..platform import Unicycle, coordinates_f, coordinates
+from ..platform import coordinates_f
 import logging
 import numpy as np
 

@@ -68,7 +68,7 @@ def frenet_coordinates_xy(frenet_paths: Frenet, spline: Spline2D) -> Frenet:
     for list_frenet in frenet_paths:
         for f in list_frenet:
             for i in range(len(f.s)):
-                s = f.s[i]/(max_interval_s+1e-6)*(spline.s[-1]-spline.s[0]) # 1e-6 to avoid take exactly 1.0, spline is not defined for 1
+                s = f.s[i]*2.7#/(max_interval_s+1e-6)*(spline.s[-1]-spline.s[0]) # 1e-6 to avoid take exactly 1.0, spline is not defined for 1
                 ix, iy = spline.calc_position(s)
                 if ix ==None:
                     break
@@ -139,12 +139,18 @@ def frenet_xy(t0: float, p:(float, float, float), s:(float, float, float)):
     # cfg.MIN_T = 3.0
     # cfg.MAX_T = 6.0
     # cfg.DT = 0.001
+    p=(3,0.2,0)
+    s = (0.8,2,-0.5)
     lateral_planner = FrenetTrajectoryPlanner(t0 = t0, p0 = p, s0=s)
+    lateral_planner.klat = 0.3
+    lateral_planner.t_interval = (cfg.MIN_T,cfg.MAX_T,cfg.D_T/2)
+    lateral_planner.di_interval = (-1,2.45,0.2)
+    lateral_planner.replanner(time=0)
 
     frenet_paths = []
     frenet_paths.append(lateral_planner.paths)
-    wx = [-1.0,  25.5, 30.0, 40]
-    wy = [-3.0, -5.5, -4.0, -3]
+    wx = [-3,  25, 35, 42]
+    wy = [-2, -9, -6, 2]
     spline = Spline2D(wx, wy)
 
     frenet_paths = frenet_coordinates_xy(frenet_paths, spline)

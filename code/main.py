@@ -40,8 +40,8 @@ def main():
 
     frenet_xy_ctot, spline = frenet_xy(t0 = t0, p=p, s=s)
 
-    plot_4_paths_lst(frenet_paths_cd_cv,frenet_paths_cd_cv, frenet_paths_ct, frenet_paths_ctot_s, target=s_target)
-    plot_xy_paths_lst_ctot(frenet_xy_ctot, spline)
+    plot_4_paths_lst(frenet_paths_cd_cv,frenet_paths_cd_cv, frenet_paths_ct, frenet_xy_ctot, spline, target=s_target)
+    # plot_xy_paths_lst_ctot(frenet_xy_ctot, spline)
 
 if __name__ == '__main__':
     main()

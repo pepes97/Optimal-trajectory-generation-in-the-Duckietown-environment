@@ -73,7 +73,8 @@ class FrenetGNTransform(FrenetTransform):
             logger.error('input array has invalid lenght')
             raise ValueError
 
-    def itransform(self, pf: np.array) -> np.array:
+
+    def itransform(self, p: np.array) -> np.array:
         """ Transform a SE(2) pose or R2 point in the global frame
         """
         R, t = self.r_mat, self.t_vect

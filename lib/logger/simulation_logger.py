@@ -10,6 +10,14 @@ logger = logging.getLogger(__name__)
 
 class SimData:
     robot_pose = ('robot_pose', 3)
+    bot0_pose = ('bot0_pose', 3)
+    bot1_pose = ('bot1_pose', 3)
+    bot2_pose = ('bot2_pose', 3)
+    bot3_pose = ('bot3_pose', 3)
+    bot0_position = ('bot0_position', 2)
+    bot1_position = ('bot1_position', 2)
+    bot2_position = ('bot2_position', 2)
+    bot3_position = ('bot3_position', 2)
     robot_frenet_pose = ('robot_frenet_pose', 3)
     control    = ('control', 2)
     trajectory_2d = ('trajectory', 2)
@@ -17,6 +25,8 @@ class SimData:
     point = ('point', 2)
     error = ('error', 2)
     derror = ('derror', 2)
+    planner = ('planner', 2)
+    #optimal_path = ('optimal_path', 2)
     
 
 class SimulationDataStorage:
@@ -46,20 +56,45 @@ class SimulationDataStorage:
                 self.db[id] = np.zeros(self.sim_length)
             else:
                 self.db[id] = np.zeros((dim, self.sim_length))
-    
-    def set(self, id: str, data, idx: int):
+
+    def set(self, *args, **kwargs):
         """ Set the idx-th value of id's storage
         """
-        assert idx >= 0 and idx < self.sim_length
-        if id not in self.db:
-            logger.error(f'{id} is not a valid key. You should first call add_argument and insert the element type.')
-            raise RuntimeError('Invalid ID')
-
-        container = self.db[id]
-        if container.shape == self.t.shape:
-            container[idx] = data
+        def _set(id: str, data, idx: int):
+            assert idx >= 0 and idx < self.sim_length
+            if id not in self.db:
+                logger.error(f'{id} is not a valid key. You should first call add_argument and insert the element type.')
+                raise RuntimeError('Invalid ID')
+            container = self.db[id]
+            if container.shape == self.t.shape:
+                container[idx] = data
+            else:
+                container[:, idx] = data
+        if len(args) != 3:
+            logger.error(f'Not enough arguments to launch set function')
+            raise RuntimeError('Invalid Parameters')
+        if isinstance(args[0], tuple):
+            arg_tuple = args[0]
+            _set(arg_tuple[0], args[1], args[2])
+        elif isinstance(args[0], str):
+            _set(*args)
         else:
-            container[:, idx] = data
+            logger.error(f'Invalid input parameters')
+            raise RuntimeError('Invalid Parameters')
+    
+#    def set(self, id: str, data, idx: int):
+#        """ Set the idx-th value of id's storage
+#        """
+#        assert idx >= 0 and idx < self.sim_length
+#        if id not in self.db:
+#            logger.error(f'{id} is not a valid key. You should first call add_argument and insert the element type.')
+#            raise RuntimeError('Invalid ID')
+#
+#        container = self.db[id]
+#        if container.shape == self.t.shape:
+#            container[idx] = data
+#        else:
+#            container[:, idx] = data
 
     def get(self, *args, **kwds):
         """ Returns the storage of id

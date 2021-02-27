@@ -7,12 +7,15 @@ from ..platform import Unicycle
 from ..trajectory import Trajectory, QuinticTrajectory2D
 from ..transform import FrenetTransform, FrenetGNTransform
 from ..controller import Controller, FrenetIOLController
+from ..planner import Planner, TrajectoryPlannerV1, TrajectoryPlannerV2
+from ..planner import TrajectoryPlannerParams
+
 
 logger = logging.getLogger(__name__)
 
 class DefaultSimulationParameters:
-    t_start = 0.0
-    t_end  = 50
+    t_start = 0.1
+    t_end  = 10
     dt     = 0.1
     robot_pose = np.array([0.0, 0.0, 0.0])
     p_start   = np.array([0.0, 0.0])
@@ -22,11 +25,43 @@ class DefaultSimulationParameters:
     dp_end  = np.array([-2.0, 2.0])
     ddp_end = np.array([1.0, -1.0])
     # PD controller parameters
-    kp1     = 2.0
-    kp2     = 2.
-    kd1     = 0.5
-    kd2     = 0.5
-    b       = 1.5
+    kp1     = 15.0
+    kp2     = 10.0
+    kd1     = 1.5
+    kd2     = 1.5
+    b       = 1.
+    pf_k2   = 40
+    pf_k3   = 1.5
+    pf_v    = 0.5
+
+    ## planner 
+
+    GLOBAL_D_T = 0.1
+    MAX_ROAD_WIDTH = 2.45 # maximum road width [m]
+    D_ROAD_W = 0.6 # road width sampling length [m]
+    T_0 = 0  # initial time [s]
+
+    D_T = 0.1 # time tick [s]
+    MAX_T = 10.0 # max prediction time [m]
+    MIN_T = 0.1 # min prediction time [m]
+
+    DES_SPEED = 5.0 # speed desired [m/s]
+    D_D_S = 1  # target speed sampling length [m/s]
+    N_S_SAMPLE = 3  # sampling number of target speed
+    LOW_SPEED_THRESH = 2.0 # low speed switch [m/s]
+    S_THRSH = 1.0
+
+    # Cost weights
+    K_J = 0.001
+    K_T = 0.01
+    K_D = 0.9
+    K_S = 0.1
+    K_DOT_S = 1.0
+    K_LAT = 1.0
+    K_LONG = 1.0
+
+    TARGET_DIST = 1 #[m] distance from following target 
+
 
 # Alias
 dsp = DefaultSimulationParameters
@@ -44,6 +79,7 @@ class SimulationConfiguration:
         self.trajectory = None
         self.transformer = None
         self.controller = None
+        self.planner = None
         # Apply changes if user provides them
         self.__dict__.update(kwargs)
         # Update robot pose if robot object is passed
@@ -52,6 +88,7 @@ class SimulationConfiguration:
         logger.debug(f'Simulation configuration: {self.__dict__}')
     
     def get_time_vect(self) -> np.array:
+        print()
         return np.arange(self.t_start, self.t_end, self.dt)
 
     def get_simulation_length(self) -> np.array:
@@ -86,9 +123,17 @@ class SimulationConfiguration:
         else:
             return self.controller
 
-    def get_elements(self) -> (np.array, Unicycle, Trajectory, FrenetTransform, Controller):
+    def get_planner(self) -> Planner:
+        if self.planner is None:
+            return TrajectoryPlannerV1(TrajectoryPlannerParams())
+        else:
+            return self.planner
+    
+    def get_elements(self) -> (np.array, Unicycle, Trajectory, FrenetTransform, Controller, Planner):
         return (self.get_time_vect(), self.get_robot(), self.get_trajectory(), self.get_transformer(),
-                self.get_controller())
+                self.get_controller(), self.get_planner())
+                
+    
 
 class SimulationConfigurationData:
     def __init__(self, **kwargs):
