@@ -94,8 +94,10 @@ def __simulate_experiment(sim_config, data_storage, trajectory, robot, transform
         target_dpos = trajectory.compute_first_derivative(ts)
         target_fdpos = transformer.transform(target_dpos)
         #Compute error
-        error = target_fpos - robot_fpose[0:2]
-        derror = target_fdpos - robot_fdp
+        #error = target_fpos - robot_fpose[0:2]
+        #derror = target_fdpos - robot_fdp
+        error = -robot_fpose[:2]
+        derror = np.array([pos_s[1], pos_d[1]])
         # Get curvature
         curvature = trajectory.compute_curvature(est_pt)
         # Compute control
