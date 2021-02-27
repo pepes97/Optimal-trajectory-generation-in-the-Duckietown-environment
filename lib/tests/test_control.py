@@ -70,14 +70,16 @@ def _simulate_experiment(sim_config, data_storage, trajectory, robot, transforme
         target_fpos = transformer.transform(target_pos)
         target_dpos = trajectory.compute_first_derivative(t_vect[i])
         target_fdpos = transformer.transform(target_dpos)
-        error = target_fpos - robot_fpose[0:2]
+        target_fdpos = np.array([1.2, 0.0])
+        #error = target_fpos - robot_fpose[0:2]
+        error = -robot_fpose[:2]
         derror = target_fdpos - robot_fdp
 
         # Get path curvature at estimate
         curvature = trajectory.compute_curvature(est_pt)
 
         # Compute control
-        u = controller.compute(robot_fpose, error, derror, curvature)
+        u = controller.compute(robot_fpose, error, target_fdpos, curvature)
 
         # Step the unicycle
         robot_p, robot_dp = robot.step(u, dsp.dt)

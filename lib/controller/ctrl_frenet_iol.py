@@ -20,7 +20,7 @@ class FrenetIOLController(Controller):
         self.kp = np.array([kp1, kp2])
         self.kd = np.array([kd1, kd2])
 
-    def compute(self, robot_fpose: np.array,
+    def __compute(self, robot_fpose: np.array,
                 error: np.array, derror: np.array,
                 k: float, *kwargs) -> np.array:
         """ Compute the trajectory tracking control term.
@@ -58,4 +58,46 @@ class FrenetIOLController(Controller):
         d_error = derror * self.kd
         # Compute control term
         u = np.matmul(T_inv, (p_error + d_error).T)
+        return u
+
+    def compute(self, robot_fpose: np.array, error: np.array, t_fvel: np.array, k: float) -> np.array:
+        """ Compute the trajectory tracking control term.
+        
+        Parameters
+        ----------
+        robot_fpose : np.array
+            Robot pose in Frenet frame (d, s, theta)
+        error : np.array
+            Error between robot pose and target position in frenet frame
+        t_fvel : np.array
+            Target velocity in frenet frame
+        k : float
+            Curvature of the path at the current step
+
+        Returns
+        -------
+        np.array
+            control term to bring the robot on the actual trajectory
+        """
+        u = np.zeros(2)
+        b = self.b
+        # Extract robot frenet coordinates
+        s, d, t = coordinates_f(robot_fpose)
+        # Precompute cos(t) and sin(t)
+        ct = np.cos(t)
+        st = np.sin(t)
+        # Compute IO Jacobian inverse
+        T = np.array(
+        [[ct * (1 + b * k * st) / (1 - k * d), -b * st],
+         [st - (k * ct) / (1 - k * d), b * ct]])
+        T_inv = np.linalg.inv(T)
+        # Compute Proportional term
+        p_error = error * self.kp
+        # Remove error on s term
+        p_error[0] = 0.0
+        # FeedForward term
+        fw_term = t_fvel[:2]
+        logger.info(f'p_error={p_error}, fw_term={fw_term}')
+        # Compute control term
+        u = np.matmul(T_inv, (fw_term + p_error).T)
         return u

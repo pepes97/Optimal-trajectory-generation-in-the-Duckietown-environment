@@ -26,6 +26,7 @@ def test_planner(*args, **kwargs):
     
     sim_config = SimulationConfiguration(**kwargs)
     # Extract key objects from configuration object
+    sim_config.controller = FrenetIOLController(.1, 0.0, 6, 0.0, 0.0)
     t_vect, robot, trajectory, transformer, controller, planner = sim_config.get_elements()
     # Configure SimulationDataStorage
     data_storage = SimulationDataStorage(t_vect)
@@ -85,17 +86,20 @@ def _simulate_experiment(sim_config, data_storage, trajectory, robot, transforme
         target_pos = transformer.itransform(np.array([pos_s[0], pos_d[0]]))
         target_fpos = np.array([pos_s[0], pos_d[0]])
         target_fdpos = np.array([pos_s[1], pos_d[1]])
-        error = target_fpos - robot_fpose[0:2]
+        #error = target_fpos - robot_fpose[0:2]
+        error = -robot_fpose[:2]
         
         # Set error on s to 0 (TEST)
         # error[0] = 0.0
-        derror = target_fdpos - robot_fdp
+        #derror = target_fdpos - robot_fdp
+        t_fvel = np.array([pos_s[1], pos_d[1]])
+        
         #print(pos_s, pos_d)
         # Get path curvature at estimate
         curvature = trajectory.compute_curvature(est_pt)
         
         # Compute control
-        u = controller.compute(robot_fpose, error, derror, curvature)
+        u = controller.compute(robot_fpose, error, t_fvel, curvature)
 
         # Step the unicycle
         robot_p, robot_dp = robot.step(u, dsp.dt)
@@ -147,8 +151,10 @@ def __simulate_experiment(sim_config, data_storage, trajectory, robot, transform
         target_dpos = trajectory.compute_first_derivative(ts)
         target_fdpos = transformer.transform(target_dpos)
         # Compute error
-        error = target_fpos - robot_fpose[0:2]
-        derror = target_fdpos - robot_fdp
+        #error = target_fpos - robot_fpose[0:2]
+        error = -robot_fpose[:2]
+        #derror = target_fdpos - robot_fdp
+        derror = np.array([pos_s[1], pos_d[1]])
         # Get curvature
         curvature = trajectory.compute_curvature(est_pt)
         # Compute control
@@ -178,6 +184,7 @@ def test_planner_full(*args, **kwargs):
 
     sim_config = SimulationConfiguration(**kwargs)
     # Extract key objects from configuration object
+    sim_config.controller = FrenetIOLController(.5, 0.0, 5, 0.0, 0.0)
     t_vect, robot, trajectory, transformer, controller, planner = sim_config.get_elements()
     # Configure SimulationDataStorage
     data_storage = SimulationDataStorage(t_vect)
