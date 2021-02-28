@@ -1,4 +1,5 @@
 import logging
+import datetime
 import numpy as np
 
 from .config import SimulationConfiguration
@@ -84,20 +85,19 @@ def __simulate_experiment(sim_config, data_storage, trajectory, robot, transform
         pos_s, pos_d = planner.replanner(t_vect[i])
         paths_planner = planner.paths
         paths_planner = frenet_to_glob(planner, trajectory, paths_planner)
+        # Check paths that do not encounter obstacles
         planner.paths = check_paths(paths_planner, sensor, robot_p)
         planner.opt_path_tot = min(planner.paths, key=attrgetter('ctot'))
+        # target pos for plot coordinates
         ts, td = pos_s[0], pos_d[0]
-        print(ts, td)
-        #check_collisions(planner,t_vect[i],paths_planner)
         target_pos = trajectory.compute_pt(ts) + compute_ortogonal_vect(trajectory, ts) * td
-        target_fpos = transformer.transform(target_pos)
-        target_dpos = trajectory.compute_first_derivative(ts)
-        target_fdpos = transformer.transform(target_dpos)
-        #Compute error
-        #error = target_fpos - robot_fpose[0:2]
-        #derror = target_fdpos - robot_fdp
-        error = -robot_fpose[:2]
+        # Compute error
+        error = np.array([0, td])-robot_fpose[:2]
         derror = np.array([pos_s[1], pos_d[1]])
+        # Print check
+        logger.info(f'Planner s, d:{ts, td}')
+        logger.info(f'Robot s,d :{robot_fpose[:2]}')
+        logger.info(f'Error:{error}')
         # Get curvature
         curvature = trajectory.compute_curvature(est_pt)
         # Compute control
@@ -112,7 +112,6 @@ def __simulate_experiment(sim_config, data_storage, trajectory, robot, transform
         data_storage.set(SimData.error, error, i)
         data_storage.set(SimData.derror, derror, i)
         data_storage.set(SimData.planner, target_pos, i)
-        
         
     return data_storage
 
@@ -168,11 +167,11 @@ def test_planner_obstacle(*args, **kwargs):
                                         robot, transformer, controller, planner, sensor)
     @timeprofiledecorator
     def __plot_fn(store: str=None):
-        fig = plot_2d_planner_obstacles_anim(data_storage, trajectory,robot, sensor, obstacle_lst, t_vect)
+        fig, ani = plot_2d_planner_obstacles_anim(data_storage, trajectory,robot, sensor, obstacle_lst, t_vect)
         if store is not None:
             # TODO (generate path inside images/<timeoftheday>/store:str)
             ani.save(store)
-        plt.show()
+            #ani.save(store, writer='ffmpeg')
     if plot_flag:
         __plot_fn(store_plot)
     return data_storage
