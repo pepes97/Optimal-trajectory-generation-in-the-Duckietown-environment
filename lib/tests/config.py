@@ -7,7 +7,7 @@ from ..platform import Unicycle
 from ..trajectory import Trajectory, QuinticTrajectory2D
 from ..transform import FrenetTransform, FrenetGNTransform
 from ..controller import Controller, FrenetIOLController
-from ..planner import Planner, TrajectoryPlannerV1, TrajectoryPlannerV2
+from ..planner import Planner, TrajectoryPlannerV1
 from ..planner import TrajectoryPlannerParams
 
 
