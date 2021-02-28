@@ -30,7 +30,8 @@ TEST_MAP = {
     'planner': test_planner,
     'planner_full': test_planner_full,
     'planner_obstacles': test_planner_obstacle,
-    'planner_moving_obstacles': test_planner_moving_obstacle
+    'planner_moving_obstacles': test_planner_moving_obstacle,
+    'lane_filter' : test_video_lane,
 }
 
 def handle_parser(args):
