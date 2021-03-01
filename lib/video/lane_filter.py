@@ -35,14 +35,21 @@ class LaneFilter:
             return image
         preproc_frame = preproc_image(frame)
         # Apply Perspective transform
+        """
+        np.float32([
+            (0.2343, 0.4166),
+            (0, 0.7292),
+            (0.99, 0.7292),
+            (0.7656, 0.4166)])
+        """
         def perspective_warp(image,
                              dest_size=(640, 480),
                              src=np.float32([
-                                 (0.2343, 0.4166),
-                                 (0, 0.7292),
-                                 (0.99, 0.7292),
-                                 (0.7656, 0.4166)]),
-                             dest=np.float32([(0, 0), (0, 1), (1, 1), (1, 0)])):
+                                 (0.3859, 0.4292),
+                                 (0.0016, 0.9729),
+                                 (0.9969, 0.9458),
+                                 (0.6109, 0.4292)]),
+                             dest=np.float32([(0.3, 0), (0.3, 1), (0.7, 1), (0.7, 0)])):
             image_size = np.float32([(image.shape[1], image.shape[0])])
             src = src * image_size
             dest = dest * np.float32(dest_size)
@@ -51,12 +58,12 @@ class LaneFilter:
             return warped
         def perspective_iwarp(image,
                               dest_size=(640, 480),
-                              src=np.float32([(0, 0), (0, 1), (1, 1), (1, 0)]),
+                              src=np.float32([(0.3, 0), (0.3, 1), (0.7, 1), (0.7, 0)]),
                               dest=np.float32([
-                                 (0.2343, 0.4166),
-                                 (0, 0.7292),
-                                 (0.99, 0.7292),
-                                 (0.7656, 0.4166)])):
+                                 (0.3859, 0.4292),
+                                 (0.0016, 0.9729),
+                                 (0.9969, 0.9458),
+                                 (0.6109, 0.4292)])):
             image_size = np.float32([(image.shape[1], image.shape[0])])
             src = src * image_size
             dest = dest * np.float32(dest_size)
@@ -154,11 +161,132 @@ class LaneFilter:
 
             return out_image, (left_fitx, right_fitx), (left_fit_, right_fit_), ploty
 
-        fig, axs = plt.subplots(2, 2)
-        out_image, fit, fit_, ploty = sliding_window(warped_frame)
-        axs[0, 0].imshow(frame[:,:,::-1])
-        axs[0, 1].imshow(perspective_warp(frame[:,:,::-1]))
-        axs[1, 0].imshow(perspective_iwarp(out_image))
-        axs[1, 1].imshow(out_image)
-        plt.show()
         
+        out_image, fit, fit_, ploty = sliding_window(warped_frame)
+        # fig, axs = plt.subplots(2, 2)
+        # axs[0, 0].imshow(frame[:,:,::-1])
+        # axs[0, 1].imshow(perspective_warp(frame[:,:,::-1]))
+        # axs[1, 0].imshow(perspective_iwarp(out_image))
+        # axs[1, 1].imshow(out_image)
+        # plt.show()
+        return perspective_iwarp(out_image)
+
+class PerspectiveWarper:
+    def __init__(self, dest_size=(640, 480),
+                 src=np.float32([
+                     (0.3796, 0.4438),
+                     (0, 0.9396),
+                     (1, 0.9396),
+                     (0.6281, 0.4438)]),
+                 dest=np.float32([(0.3, 0), (0.3, 1), (0.7, 1), (0.7, 0)])):
+        self.dest_size = dest_size
+        dest_size = np.float32(dest_size)
+        self.src = src * dest_size
+        self.dest = dest * dest_size
+        self.M = cv2.getPerspectiveTransform(self.src, self.dest)
+        self.iM = cv2.getPerspectiveTransform(self.dest, self.src)
+
+    def warp(self, frame, draw=False):
+        warped_frame = cv2.warpPerspective(frame, self.M, self.dest_size)
+        if draw:
+            fig, axs = plt.subplots(1, 2)
+            axs[0].imshow(frame)
+            axs[0].plot(self.src[:, 0], self.src[:, 1], 'r')
+            axs[1].imshow(warped_frame)
+            axs[1].plot(self.dest[:, 0], self.dest[:, 1], 'r')
+            plt.show()
+        
+        return warped_frame
+
+    def iwarp(self, frame):
+        return cv2.warpPerspective(frame, self.iM, self.dest_size)
+
+class YellowLaneFilter:
+    def __init__(self):
+        # Yellow of line is between 14 and 22 in the H channel
+        self.yellow_threshold = (14, 22)
+        
+    def process(self, frame):
+        # Extract yellow component
+        h, s, l = separate_hsl(cv2.blur(frame, (7, 7)))
+        h_mask = cv2.inRange(h, self.yellow_threshold[0], self.yellow_threshold[1])
+        frame = cv2.bitwise_and(frame, frame, mask=h_mask)
+        return h_mask
+        
+        
+        
+        
+class CenterLineFilter:
+    def __init__(self):
+        # Yellow of line is between 14 and 22 in h channel
+        self.yellow_thresh = (14, 22)
+        self.s_thresh = (100, 130)
+        pass
+    def process(self, frame):
+        def preproc(image):
+            # Extract yellow info
+            h, s, l = separate_hsl(cv2.blur(frame, (7, 7)))
+            h_mask = cv2.inRange(h, self.yellow_thresh[0], self.yellow_thresh[1])
+            s_mask = cv2.inRange(s, self.s_thresh[0], self.s_thresh[1])
+            preproc_frame = cv2.bitwise_and(frame, frame, mask=h_mask)
+            return cv2.bitwise_and(h_mask, h_mask, mask=s_mask)
+        
+        return preproc(frame)
+
+class SlidingWindowTracker:
+    def __init__(self):
+        self.coeff_a = []
+        self.coeff_b = []
+        self.coeff_c = []
+
+    def search(self, image, no_windows: int=9, margin: int=50, min_pix: int=1, draw_windows=False):
+        test_image = np.dstack((image, image, image)) * 255
+        fit_params = np.empty(3)
+        # Compute histogram
+        histogram = get_hist(image)
+        line_base = np.argmax(histogram)
+        # Set window height
+        window_height = np.int(image.shape[0] / no_windows)
+        current_base = line_base
+        # Get non zero pixels in the image
+        nonzero = image.nonzero()
+        nonzeroy = np.array(nonzero[0])
+        nonzerox = np.array(nonzero[1])
+        # lane pixels list
+        lane_pixels_inds = []
+        for window in range(no_windows):
+            # Generate window boundaries
+            window_y_low = image.shape[0] - (window+1) * window_height
+            window_y_high = image.shape[0] - window * window_height
+            window_x_low = current_base - margin
+            window_x_high = current_base + margin
+            if draw_windows:
+                cv2.rectangle(test_image, (window_x_low, window_y_low), (window_x_high, window_y_high), 100, 3)
+            # Get pixels in window
+            good_pixels = ((nonzeroy >= window_y_low) &
+                           (nonzeroy < window_y_high) &
+                           (nonzerox >= window_x_low) &
+                           (nonzerox < window_x_high)).nonzero()[0]
+            lane_pixels_inds.append(good_pixels)
+            if len(good_pixels) > min_pix:
+                current_base = np.int(np.mean(nonzerox[good_pixels]))
+        # Get all pixels indices in the lane
+        lane_pixels_inds = np.concatenate(lane_pixels_inds)
+        lane_x = nonzerox[lane_pixels_inds]
+        lane_y = nonzeroy[lane_pixels_inds]
+        if lane_x.size == 0 or lane_y.size == 0:
+            return np.zeros(3)
+        lane_fit = np.polyfit(lane_y, lane_x, 2)
+        self.coeff_a.append(lane_fit[0])
+        self.coeff_b.append(lane_fit[1])
+        self.coeff_c.append(lane_fit[2])
+        fit_params[0] = np.mean(self.coeff_a[-1:])
+        fit_params[1] = np.mean(self.coeff_b[-1:])
+        fit_params[2] = np.mean(self.coeff_c[-1:])
+        return test_image, lane_fit
+
+class SlidingWindowDoubleTracker:
+    # TODO
+    def __init__(self):
+        pass
+    

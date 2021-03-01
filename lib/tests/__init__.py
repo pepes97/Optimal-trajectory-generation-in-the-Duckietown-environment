@@ -15,3 +15,4 @@ from .test_planner import test_planner, test_planner_full
 from .test_obstacle_planner import test_planner_obstacle
 from .test_moving_obstacle_planner import test_planner_moving_obstacle
 from .test_video_lane import test_video_lane
+from .test_dt import test_duckietown

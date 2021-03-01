@@ -4,4 +4,4 @@ Video package initializer
 
 from .utils import *
 from .binarize import *
-from .line_filter import LaneFilter
+from .lane_filter import *

@@ -32,6 +32,7 @@ TEST_MAP = {
     'planner_obstacles': test_planner_obstacle,
     'planner_moving_obstacles': test_planner_moving_obstacle,
     'lane_filter' : test_video_lane,
+    'duckietown_manual' : test_duckietown,
 }
 
 def handle_parser(args):
