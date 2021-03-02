@@ -36,11 +36,12 @@ def test_video_lane(*args, **kwargs):
             ploty = np.arange(0, warped_frame.shape[0]-1, 1)
             line_fit = line_fit[0] * ploty**2 + line_fit[1] * ploty + line_fit[2]
             line_unwarped = np.vstack((line_fit, ploty))
-            line_unwarped = line_unwarped.reshape(-1, 1, 2)
+            line_unwarped = np.expand_dims(line_unwarped, axis=1)
+            line_unwarped = np.transpose(line_unwarped, (2, 1, 0))
             line_unwarped = cv2.perspectiveTransform(line_unwarped, perspective_projector.iM)
-            axs[1, i].plot(line_fit, ploty, 'y', linewidth=5)
+            axs[1, i].plot(line_fit, ploty, 'b', linewidth=3)
             # TODO FIX
-            #axs[0, i].plot(line_unwarped[:, 0, 1], line_unwarped[:, 0, 0], 'y', 15)
+            axs[0, i].plot(line_unwarped[:, 0, 0], line_unwarped[:, 0, 1], 'b', linewidth=3)
         else:
             print('No line found.')
         axs[0, i].imshow(frame)

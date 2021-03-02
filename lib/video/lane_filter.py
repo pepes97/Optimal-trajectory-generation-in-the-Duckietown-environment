@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 import logging
 from matplotlib import pyplot as plt
+import functools
 from .utils import *
 from .binarize import *
 
@@ -199,48 +200,42 @@ class PerspectiveWarper:
         return warped_frame
 
     def iwarp(self, frame):
-        return cv2.warpPerspective(frame, self.iM, self.dest_size)
-
-class YellowLaneFilter:
-    def __init__(self):
-        # Yellow of line is between 14 and 22 in the H channel
-        self.yellow_threshold = (14, 22)
-        
-    def process(self, frame):
-        # Extract yellow component
-        h, s, l = separate_hsl(cv2.blur(frame, (7, 7)))
-        h_mask = cv2.inRange(h, self.yellow_threshold[0], self.yellow_threshold[1])
-        frame = cv2.bitwise_and(frame, frame, mask=h_mask)
-        return h_mask
-        
-        
-        
+        return cv2.warpPerspective(frame, self.iM, self.dest_size)        
         
 class CenterLineFilter:
     def __init__(self):
         # Yellow of line is between 14 and 22 in h channel
-        self.yellow_thresh = (14, 22)
-        self.s_thresh = (100, 130)
+        self.yellow_thresh = (19, 24)
+        self.s_thresh = (80, 150)
         pass
     def process(self, frame):
         def preproc(image):
             # Extract yellow info
-            h, s, l = separate_hsl(cv2.blur(frame, (7, 7)))
+            h, s, l = separate_hsl(cv2.blur(frame, (3, 3)))
             h_mask = cv2.inRange(h, self.yellow_thresh[0], self.yellow_thresh[1])
             s_mask = cv2.inRange(s, self.s_thresh[0], self.s_thresh[1])
-            preproc_frame = cv2.bitwise_and(frame, frame, mask=h_mask)
-            return cv2.bitwise_and(h_mask, h_mask, mask=s_mask)
+            #preproc_frame = cv2.bitwise_and(frame, frame, mask=h_mask)
+            mask = cv2.bitwise_and(h_mask, h_mask, mask=s_mask)
+            # Apply morphological operation to remove imperfections
+            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, (5, 5))
+            
+            return mask
         
         return preproc(frame)
 
 class SlidingWindowTracker:
-    def __init__(self):
+    def __init__(self, robust_factor: int=1):
         self.coeff_a = []
         self.coeff_b = []
         self.coeff_c = []
+        assert robust_factor >= 1
+        self.robust_factor = robust_factor
+        # Minimum mask pixels to initiate line search
+        self.minimum_pixels = 1000
+        self.contour_min_area = 200
 
     def search(self, image, no_windows: int=9, margin: int=50, min_pix: int=1, draw_windows=False):
-        test_image = np.dstack((image, image, image)) * 255
+        test_image = np.dstack((image, image, image))
         fit_params = np.empty(3)
         # Compute histogram
         histogram = get_hist(image)
@@ -249,9 +244,28 @@ class SlidingWindowTracker:
         window_height = np.int(image.shape[0] / no_windows)
         current_base = line_base
         # Get non zero pixels in the image
+        if np.count_nonzero(image) < self.minimum_pixels:
+            return test_image, np.zeros(3)
         nonzero = image.nonzero()
         nonzeroy = np.array(nonzero[0])
         nonzerox = np.array(nonzero[1])
+        # Find Contours approach
+        contours, hierarchy = cv2.findContours(image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contours = list(filter(lambda ctr: cv2.contourArea(ctr) > self.contour_min_area, contours))
+        # Get midpoints for each contour
+        contours_midpt = []
+        for ctr in contours:
+            ctr_moment = cv2.moments(ctr)
+            px = int(ctr_moment['m10'] / ctr_moment['m00'])
+            py = int(ctr_moment['m01'] / ctr_moment['m00'])
+            contours_midpt.append([px, py])
+        contours_midpt = np.array(contours_midpt)
+        if draw_windows:
+            cv2.drawContours(test_image, contours, -1, (0, 255, 0), 3)
+            for i in range(len(contours)):
+                cv2.circle(test_image, (contours_midpt[i, 0], contours_midpt[i, 1]), 2, (255, 0, 0), -1)
+        """
+        # REPLACE WITH FindingContours
         # lane pixels list
         lane_pixels_inds = []
         for window in range(no_windows):
@@ -272,17 +286,18 @@ class SlidingWindowTracker:
                 current_base = np.int(np.mean(nonzerox[good_pixels]))
         # Get all pixels indices in the lane
         lane_pixels_inds = np.concatenate(lane_pixels_inds)
-        lane_x = nonzerox[lane_pixels_inds]
-        lane_y = nonzeroy[lane_pixels_inds]
+        """
+        lane_x = contours_midpt[:, 0]#nonzerox#[lane_pixels_inds]
+        lane_y = contours_midpt[:, 1]#nonzeroy#[lane_pixels_inds]
         if lane_x.size == 0 or lane_y.size == 0:
-            return np.zeros(3)
+            return test_image, np.zeros(3)
         lane_fit = np.polyfit(lane_y, lane_x, 2)
         self.coeff_a.append(lane_fit[0])
         self.coeff_b.append(lane_fit[1])
         self.coeff_c.append(lane_fit[2])
-        fit_params[0] = np.mean(self.coeff_a[-1:])
-        fit_params[1] = np.mean(self.coeff_b[-1:])
-        fit_params[2] = np.mean(self.coeff_c[-1:])
+        fit_params[0] = np.mean(self.coeff_a[-self.robust_factor:])
+        fit_params[1] = np.mean(self.coeff_b[-self.robust_factor:])
+        fit_params[2] = np.mean(self.coeff_c[-self.robust_factor:])
         return test_image, lane_fit
 
 class SlidingWindowDoubleTracker:
@@ -290,3 +305,13 @@ class SlidingWindowDoubleTracker:
     def __init__(self):
         pass
     
+class MiddleLineFilter():
+    """ Finds and tracks the middle dashed yellow line.
+    If the line is found and verified, then it returns the best quadratic fit (in lane space), the 
+    camera offset (d) and inclination (theta~)
+    """
+    def __init__(self, projector, mapper, tracker):
+        self.projector = projector
+        self.mapper = mapper
+        self.tracker = tracker
+        ...
