@@ -29,7 +29,7 @@ def test_video_lane(*args, **kwargs):
         frame = cv2.imread(impath)[:,:,::-1]
         warped_frame = perspective_projector.warp(frame)
         thresholded_frame = line_filter.process(warped_frame)
-        out_image, line_fit = line_tracker.search(thresholded_frame, draw_windows=True)
+        line_fit, out_image, _ = line_tracker.search(thresholded_frame, draw_windows=True)
         if (line_fit != np.zeros(3)).all():
             # Line is found
             # plot line

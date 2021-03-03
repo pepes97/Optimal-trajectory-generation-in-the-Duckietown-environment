@@ -8,6 +8,9 @@ from matplotlib import pyplot as plt
 import matplotlib.animation as animation
 import cv2
 from ..video import *
+from ..controller import FrenetIOLController
+
+u = np.array([0.5, 0.0])
 
 def test_duckietown(*args, **kwargs):
     env = DuckietownEnv(seed=123,
@@ -15,6 +18,8 @@ def test_duckietown(*args, **kwargs):
     perspective_projector = PerspectiveWarper()
     line_filter = CenterLineFilter()
     line_tracker = SlidingWindowTracker(robust_factor=1)
+    middle_lane_filter = MiddleLineFilter(perspective_projector, line_filter, line_tracker)
+    controller = FrenetIOLController(.5, 0.0, 30, 0.0, 0.0)
     fig, ax = plt.subplots(1, 2)
     env.reset()
     env.render()
@@ -23,8 +28,23 @@ def test_duckietown(*args, **kwargs):
     im2 = ax[1].imshow(obs)
     curve_line, = ax[0].plot([], [], 'r')
     curve_unwarped_line, = ax[1].plot([], [], 'r')
+    
     def animate(i):
-        obs, reward, done, info = env.step(np.array([0.3, .4]))
+        global u
+        obs, reward, done, info = env.step(u)
+        line_found, cpose = middle_lane_filter.process(obs)
+        cpose[0] = cpose[0]/350.
+        if line_found:
+            robot_fpose = np.array([0.0, cpose[0], cpose[1]])
+            error = np.array([0, 0.5]) - robot_fpose[:2]
+            t_fvel = np.array([5, 0.0])
+            curvature = 0
+            u = controller.compute(robot_fpose, error, t_fvel, curvature)
+            u = u / np.linalg.norm(u)
+            u[1] *= -1
+            print(f'fpose={robot_fpose}, u={u}')
+            
+        """
         warped_frame = perspective_projector.warp(obs)
         thresholded_frame = line_filter.process(warped_frame)
         out_image, line_fit = line_tracker.search(thresholded_frame, draw_windows=True)
@@ -46,12 +66,13 @@ def test_duckietown(*args, **kwargs):
             curve_line.set_ydata([])
             curve_unwarped_line.set_xdata([])
             curve_unwarped_line.set_ydata([])
-            
-        im.set_array(out_image)
+        """
+        
+        im.set_array(middle_lane_filter.plot_image)
         im2.set_array(obs)
         env.render()
         return [im, im2,  curve_line, curve_unwarped_line]
-    ani = animation.FuncAnimation(fig, animate, frames=500, interval=30, blit=True)
+    ani = animation.FuncAnimation(fig, animate, frames=500, interval=20, blit=True)
     plt.show()
         
     #for i in range(500):
