@@ -36,7 +36,7 @@ def test_duckietown(*args, **kwargs):
         cpose[0] = cpose[0]/350.
         if line_found:
             robot_fpose = np.array([0.0, cpose[0], cpose[1]])
-            error = np.array([0, 0.5]) - robot_fpose[:2]
+            error = np.array([0, 0.0]) - robot_fpose[:2]
             t_fvel = np.array([5, 0.0])
             curvature = 0
             u = controller.compute(robot_fpose, error, t_fvel, curvature)
