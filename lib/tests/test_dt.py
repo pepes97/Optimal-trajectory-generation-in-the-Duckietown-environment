@@ -81,3 +81,11 @@ def test_duckietown(*args, **kwargs):
     #plt.show()
 
 
+def test_duckietown_obstacles(*args, **kwargs):
+    env = DuckietownEnv(seed=123,
+                        map_name='loop_obstacles')
+    env.reset()
+    env.render()
+    for i in range(1500):
+        obs, reward, done, info = env.step(np.array([0.2, 0.3]))
+        env.render()
