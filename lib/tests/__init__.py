@@ -14,5 +14,6 @@ from .config import DefaultSimulationParameters
 from .test_planner import test_planner, test_planner_full
 from .test_obstacle_planner import test_planner_obstacle
 from .test_moving_obstacle_planner import test_planner_moving_obstacle
-from .test_video_lane import test_video_lane
+from .test_video_lane import test_video_lane, test_video_lane_obstacles
 from .test_dt import test_duckietown
+from .test_semantic_mapper import test_semantic_mapper, test_ransac

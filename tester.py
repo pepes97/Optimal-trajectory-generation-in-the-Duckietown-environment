@@ -32,7 +32,10 @@ TEST_MAP = {
     'planner_obstacles': test_planner_obstacle,
     'planner_moving_obstacles': test_planner_moving_obstacle,
     'lane_filter' : test_video_lane,
+    'lane_filter_obstacles': test_video_lane_obstacles,
     'duckietown_manual' : test_duckietown,
+    'semantic_mapper': test_semantic_mapper,
+    'ransac': test_ransac
 }
 
 def handle_parser(args):

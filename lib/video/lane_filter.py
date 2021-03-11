@@ -16,7 +16,7 @@ class PerspectiveWarper:
                      (0, 0.9396),
                      (1, 0.9396),
                      (0.6281, 0.4438)]),
-                 dest=np.float32([(0.3, 0), (0.3, 1), (0.7, 1), (0.7, 0)])):
+                 dest=np.float32([(0.4, 0.5), (0.4, 1), (0.6, 1), (0.6, 0.5)])):
         self.dest_size = dest_size
         dest_size = np.float32(dest_size)
         self.src = src * dest_size
@@ -44,6 +44,7 @@ class CenterLineFilter:
         # Yellow of line is between 14 and 22 in h channel
         self.yellow_thresh = (19, 24)
         self.s_thresh = (80, 150)
+        self.l_thresh = (0, 255)
         pass
     def process(self, frame):
         def preproc(image):
@@ -51,8 +52,10 @@ class CenterLineFilter:
             h, s, l = separate_hsl(cv2.blur(frame, (3, 3)))
             h_mask = cv2.inRange(h, self.yellow_thresh[0], self.yellow_thresh[1])
             s_mask = cv2.inRange(s, self.s_thresh[0], self.s_thresh[1])
+            l_mask = cv2.inRange(l, self.l_thresh[0], self.l_thresh[1])
             #preproc_frame = cv2.bitwise_and(frame, frame, mask=h_mask)
             mask = cv2.bitwise_and(h_mask, h_mask, mask=s_mask)
+            mask = cv2.bitwise_and(mask, mask, mask=l_mask)
             # Apply morphological operation to remove imperfections
             mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, (5, 5))
 
@@ -403,3 +406,9 @@ class TrajectoryFilter():
             self.line_found = False
         return self.line_found, np.float32([d, t])
 
+class RedFilter:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def process(self, frame):
+        return np.zeros((frame.shape[0], frame.shape[1], 1), dtype='uint8')
