@@ -363,8 +363,6 @@ class MiddleLineFilter():
             self.line_found = False
         return self.line_found, np.float32([d, t])
 
-
-
 class TrajectoryFilter():
     """ Finds and tracks the middle dashed yellow line.
     If the line is found and verified, then it returns the best quadratic fit (in lane space), the
