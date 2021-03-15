@@ -7,6 +7,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
 import cv2
+from pyglet.window import key
+import pyglet
+import sys
 from ..video import *
 from ..controller import FrenetIOLController
 
@@ -14,7 +17,8 @@ u = np.array([0.5, 0.0])
 
 def test_duckietown(*args, **kwargs):
     env = DuckietownEnv(seed=123,
-                        map_name='loop_empty')
+                        map_name='loop_empty',
+                        camera_rand=False)
     perspective_projector = PerspectiveWarper()
     line_filter = CenterLineFilter()
     line_tracker = SlidingWindowTracker(robust_factor=1)
@@ -83,5 +87,3 @@ def test_duckietown(*args, **kwargs):
     #    obs, reward, done, info = env.step(np.array([0.1, 0.0]))
     #    env.render()
     #plt.show()
-
-

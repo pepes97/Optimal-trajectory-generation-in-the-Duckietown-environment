@@ -10,12 +10,15 @@ from ..video import *
 
 logger = logging.getLogger(__name__)
 
-IMAGE_PATH_LST = ['./images/dt_samples/01.png',
-                  './images/dt_samples/02.png',
-                  './images/dt_samples/03.png',
-                  './images/dt_samples/04.png',
-                  './images/dt_samples/05.png',
-                  './images/dt_samples/06.png',]
+IMAGE_PATH_LST = ['./images/dt_samples/30.jpg',
+                  #'./images/dt_samples/32.jpg',
+                  #'./images/dt_samples/43.jpg',
+                  './images/dt_samples/45.jpg',
+                  './images/dt_samples/56.jpg',
+                  #'./images/dt_samples/67.jpg',
+]
+
+IMAGE_PATH_LST = [f'./images/dt_samples/{i}.jpg' for i in range(1, 100)]
 
 
 def test_video_lane(*args, **kwargs):
@@ -56,4 +59,61 @@ def test_video_lane(*args, **kwargs):
         proc_frame = lane_filter.process(frame)
         axs[i].imshow(proc_frame)
     plt.show()"""
+
+def test_video_lane_obstacles(*args, **kwargs):
+    yellow_filter = CenterLineFilter()
+    yellow_filter.yellow_thresh = (20, 35)
+    yellow_filter.s_thresh = (65, 190)
+    yellow_filter.l_thresh = (30, 255)
+    white_filter = LateralLineFilter()
+    segmentator = Segmentator()
+    perspective_projector = PerspectiveWarper()
+    obstacle_finder = ObstacleDetector()
+    line_tracker = SlidingWindowTracker()
+    fig, axs = plt.subplots(1, 3, figsize=(20, 5))
+    axs[0].set_title('Frame')
+    axs[1].set_title('Frame Warped')
+    axs[2].set_title('Yellow segmented')
+    im0 = im1 = im2 = None
+    for i, impath in enumerate(IMAGE_PATH_LST):
+        # Read frame
+        frame = cv2.imread(impath)[:,:,::-1]
+        # Warp via perspective_projector
+        frame_warped = perspective_projector.warp(frame)
+        #h, s, l = separate_hsl(cv2.blur(frame_warped, (1, 1)))
+        # Separate color masks
+        yellow_mask  = yellow_filter.process(frame_warped)
+        white_mask   = white_filter.process(frame_warped)
+        
+        contours, evals_lst = segmentator.process(yellow_mask)
+        obstacle_labels = obstacle_finder.process(evals_lst)
+        ducks = []
+        yellow_lane = []
+        print(f'Image_{i}')
+        for j, eval in enumerate(evals_lst):
+            # Get centroid coordinates
+            M = cv2.moments(contours[j])
+            cx = int(M['m10']/M['m00'])
+            cy = int(M['m01']/M['m00'])
+            print(f'Box_{j}: center={(cx, cy)}, o_type={obstacle_labels[j][1]}')
+            if obstacle_labels[j] == ObstacleType.duck:
+                ducks.append(contours[j])
+            elif obstacle_labels[j] == ObstacleType.yellow_lane:
+                yellow_lane.append(contours[j])
+        yellow_frame = cv2.bitwise_and(frame_warped, frame_warped, mask=yellow_mask)
+        if len(ducks) > 0:
+            cv2.drawContours(yellow_frame, ducks, -1, (255, 0, 0), 3)
+        if len(yellow_lane) > 0:
+            cv2.drawContours(yellow_frame, yellow_lane, -1, (0, 0, 255), 3)
+
+        if im0 is None:
+            im0 = axs[0].imshow(frame)
+            im1 = axs[1].imshow(frame_warped)
+            im2 = axs[2].imshow(yellow_frame)
+        else:
+            im0.set_data(frame)
+            im1.set_data(frame_warped)
+            im2.set_data(yellow_frame)
+        plt.pause(5)
+        plt.draw()
     
