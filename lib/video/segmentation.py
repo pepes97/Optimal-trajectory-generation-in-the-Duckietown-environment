@@ -33,14 +33,6 @@ class SegmentatorYellow:
         eval_lst = []
         contours, _ = cv2.findContours(frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         contours = list(filter(lambda x: cv2.contourArea(x) > self.min_area, contours))
-        # Process intertia tensor foreach contour
-        #for i, contour in enumerate(contours):
-        #    x, y, w, h = cv2.boundingRect(contour)
-        #    roi = frame[y:y+h, x:x+w]
-        #    cov = moments_cov(roi)
-        #    evals, evecs = np.linalg.eig(cov)
-        #    sort_indices = np.argsort(evals)[::-1]
-        #    eval_lst.append(evals[sort_indices[0]] / evals[sort_indices[1]])
         return contours#, eval_lst
 
 class SegmentatorChannel:
@@ -48,7 +40,7 @@ class SegmentatorChannel:
         self.min_area = min_area
 
     def process(self, frame):
-        contours, _ = cv2.findContours(frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         contours = list(filter(lambda x: cv2.contourArea(x) > self.min_area, contours))
         return contours
 

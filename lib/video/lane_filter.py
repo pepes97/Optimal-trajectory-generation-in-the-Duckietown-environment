@@ -49,7 +49,7 @@ class CenterLineFilter:
     def process(self, frame):
         def preproc(image):
             # Extract yellow info
-            h, s, l = separate_hsl(cv2.blur(frame, (3, 3)))
+            h, s, l = separate_hsl(frame)#cv2.blur(frame, (3, 3)))
             h_mask = cv2.inRange(h, self.yellow_thresh[0], self.yellow_thresh[1])
             s_mask = cv2.inRange(s, self.s_thresh[0], self.s_thresh[1])
             l_mask = cv2.inRange(l, self.l_thresh[0], self.l_thresh[1])

@@ -36,7 +36,7 @@ def get_hist(image):
     hist = np.sum(image[image.shape[0]//2:,:], axis=0)
     return hist
 
-def ransac_polyfit(x, y, order=2, n=3, k=50, t=40, d=6, f=0.3, initial_estimate=None):
+def ransac_polyfit(x, y, order=2, n=3, k=50, t=40, d=6, f=0.3, w=None, initial_estimate=None):
     """
     Thanks https://en.wikipedia.org/wiki/Random_sample_consensus
     n – minimum number of data points required to fit the model
@@ -49,15 +49,15 @@ def ransac_polyfit(x, y, order=2, n=3, k=50, t=40, d=6, f=0.3, initial_estimate=
     bestfit = initial_estimate
     for it in range(k):
         possible_inliers = np.random.randint(len(x), size=n)
-        possible_model = np.polyfit(x[possible_inliers], y[possible_inliers], order)
+        possible_model = np.polyfit(x[possible_inliers], y[possible_inliers],
+                                    order, w=w[possible_inliers])
         computed_inliers = np.abs(np.polyval(possible_model, x)-y) < t
-        print(sum(computed_inliers), len(x) * f, d)
         if sum(computed_inliers) >= d and sum(computed_inliers) > len(x) * f:
-            best_model = np.polyfit(x[computed_inliers], y[computed_inliers], order)
+            best_model = np.polyfit(x[computed_inliers], y[computed_inliers], order,
+                                    w=w[computed_inliers])
             current_err = np.sum(np.abs(np.polyval(best_model, x[computed_inliers])
                                         - y[computed_inliers]))
             if current_err < besterr:
-                print('found bestfit')
                 besterr = current_err
                 bestfit = best_model
     return bestfit
