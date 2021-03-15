@@ -35,14 +35,14 @@ def test_duckietown(*args, **kwargs):
     def animate(i):
         global u
         obs, reward, done, info = env.step(u)
-        line_found, cpose = middle_lane_filter.process(obs)
-        line_found, cpose = lateral_lane_filter.process(obs)
-        cpose[0] = cpose[0]/350.
+
+        line_found, cpose, curv = lateral_lane_filter.process(obs)
+
         if line_found:
             robot_fpose = np.array([0.0, cpose[0], cpose[1]])
             error = np.array([0, 0.0]) - robot_fpose[:2]
-            t_fvel = np.array([7, 0.0])
-            curvature = 0
+            t_fvel = np.array([1, 0.0])
+            curvature = curv
             u = controller.compute(robot_fpose, error, t_fvel, curvature)
             u = u / np.linalg.norm(u)
             u[1] *= -1
