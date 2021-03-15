@@ -399,7 +399,7 @@ class TrajectoryFilter():
                 cv2.circle(self.plot_image, tuple(point_on_line), 5, (255, 0, 0), -1)
 
             points_on_target = np.stack(points_on_target) * pixel_ratio
-            index = next(index for index,point in enumerate(points_on_target) if point[1]>=0)
+            index = len(points_on_target)//2
             d = (320 * pixel_ratio - points_on_target[index,0]) 
             t = points_on_target[index+1] - points_on_target[index]
             t = np.pi/2 - np.arctan2(t[1], t[0])
