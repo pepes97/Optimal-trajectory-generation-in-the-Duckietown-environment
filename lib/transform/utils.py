@@ -14,7 +14,7 @@ def homogeneous_transform(pose: np.array) -> (np.array, np.array):
     return R, p
 
 def homogeneous_itransform(pose: np.array) -> (np.array, np.array):
-    _R, _p = homogeneous_trasform(pose)
+    _R, _p = homogeneous_transform(pose)
     R = np.linalg.inv(_R)
     p = - np.matmul(R, _p)
     return R, p

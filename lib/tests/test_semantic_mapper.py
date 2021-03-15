@@ -15,11 +15,13 @@ IMAGE_PATH_LST = [f'./images/dt_samples/{i}.jpg' for i in range(0, 170)]
 OBJ_COLOR_DICT = {
     ObjectType.UNKNOWN: (0, 128, 128),
     ObjectType.YELLOW_LINE: (255, 255, 0),
-    ObjectType.WHITE_LINE:  (255, 255, 255),
+    ObjectType.WHITE_LINE:  (255, 0, 0),
     ObjectType.DUCK: (0, 255, 255),
     ObjectType.CONE: (255, 0, 0),
     ObjectType.ROBOT: (0, 0, 128),
-    ObjectType.WALL: (255, 0, 255)
+    ObjectType.WALL: (255, 0, 255),
+    ObjectType.RIGHT_LINE: (255, 255, 255),
+    ObjectType.LEFT_LINE:  (0, 0, 255)
 }
 
 def test_semantic_mapper(*args, **kwargs):
@@ -72,7 +74,7 @@ def test_semantic_mapper(*args, **kwargs):
             im1.set_data(wframe)
             im2.set_data(pframe)
             p0.set_xdata(pline_fit)
-        plt.pause(0.1)
+        plt.pause(0.01)
         plt.draw()
 
 
