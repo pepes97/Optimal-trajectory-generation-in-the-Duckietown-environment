@@ -103,10 +103,10 @@ def update(dt):
     obs, reward, done, info = env.step(action)
     #print("step_count = %s, reward=%.3f" % (env.unwrapped.step_count, reward))
     #print(obs)
-    if iterator % 10 == 0:
-        obs_rgb = cv2.cvtColor(obs, cv2.COLOR_BGR2RGB)
-        cv2.imwrite(f'test_images/{image_idx}.jpg', obs_rgb)
-        image_idx += 1
+    #if iterator % 10 == 0:
+    obs_rgb = cv2.cvtColor(obs, cv2.COLOR_BGR2RGB)
+    cv2.imwrite(f'test_images/{image_idx}.jpg', obs_rgb)
+    image_idx += 1
 
     if key_handler[key.RETURN]:
 

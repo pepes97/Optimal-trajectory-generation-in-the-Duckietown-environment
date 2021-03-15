@@ -77,6 +77,62 @@ def test_semantic_mapper(*args, **kwargs):
         plt.pause(0.01)
         plt.draw()
 
+def test_semantic_mapper_video(*args, **kwargs):
+    cap = cv2.VideoCapture('images/dt_samples/sample.avi')
+    projector       = PerspectiveWarper()
+    yellow_filter   = CenterLineFilter()
+    white_filter    = LateralLineFilter()
+    red_filter      = RedFilter()
+    filter_dict     = {'white': white_filter, 'yellow': yellow_filter, 'red': red_filter}
+    mask_dict       = {'white': None, 'yellow': None, 'red': None}
+    segmentator     = Segmentator()
+    segment_dict    = {'white': None, 'yellow': None, 'red': None}
+    semantic_mapper = SemanticMapper()
+    # Adjust filters properties
+    yellow_filter.yellow_thresh = (20, 35)
+    yellow_filter.s_thresh = (65, 190)
+    yellow_filter.l_thresh = (30, 255)
+    # Prepare the matplotlib container
+    fig, axs = plt.subplots(1, 3, figsize=(20, 5))
+    im0 = im1 = im2 = None
+    p0 = p1 = None
+    while cap.isOpened():
+        ret, frame = cap.read()
+        frame = frame[:, :, ::-1]
+        wframe = projector.warp(frame)
+        pframe = np.zeros((wframe.shape[0], wframe.shape[1], 3), dtype='uint8')
+        # Compute mask dictionary
+        for fkey in filter_dict.keys():
+            mask_dict[fkey] = filter_dict[fkey].process(wframe)
+        mask_t = cv2.bitwise_or(mask_dict['white'], mask_dict['yellow'])
+        # Segmentize the masks
+        segment_dict = segmentator.process(mask_dict)
+        # Generate semantic dictionary
+        object_dict, pfit, feat_dict  = semantic_mapper.process(segment_dict)
+        for obj_lst in object_dict.values():
+            for object in obj_lst:
+                cv2.drawContours(pframe, object['contour'], -1, OBJ_COLOR_DICT[object['class']], 3)
+        if pfit is not None:
+            ploty = np.arange(0, wframe.shape[0]-1, 1)
+            #pline_fit = pfit[0] * ploty**2 + pfit[1] * ploty + pfit[2]
+            pline_fit = np.polyval(pfit, ploty)
+            if p0 is None:
+                p0,  = axs[2].plot(pline_fit, ploty, 'r', linewidth=2)
+            else:
+                p0.set_xdata(pline_fit)
+        # Fill matplotlib container
+        if im0 is None:
+            im0 = axs[0].imshow(frame)
+            im1 = axs[1].imshow(wframe)
+            im2 = axs[2].imshow(pframe)
+        else:
+            im0.set_data(frame)
+            im1.set_data(wframe)
+            im2.set_data(pframe)
+        plt.pause(0.0001)
+        plt.draw()        
+    ...
+
 
 def test_ransac(*args, **kwargs):
     IM_PATH = ['./images/dt_samples/8.jpg', './images/dt_samples/22.jpg']

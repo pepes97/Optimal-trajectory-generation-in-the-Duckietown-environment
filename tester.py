@@ -35,6 +35,7 @@ TEST_MAP = {
     'lane_filter_obstacles': test_video_lane_obstacles,
     'duckietown_manual' : test_duckietown,
     'semantic_mapper': test_semantic_mapper,
+    'semantic_mapper_video': test_semantic_mapper_video,
     'ransac': test_ransac
 }
 
