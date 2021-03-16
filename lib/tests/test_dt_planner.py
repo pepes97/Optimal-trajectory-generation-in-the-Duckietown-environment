@@ -47,20 +47,22 @@ def test_duckietown_planner(*args, **kwargs):
     im2 = ax[1].imshow(obs)
     curve_line, = ax[0].plot([], [], 'r')
     curve_unwarped_line, = ax[1].plot([], [], 'r')
+    #scat = ax[1].scatter(0.0,0.0, c='y')
 
     def animate(i):
         global u
         obs, reward, done, info = env.step(u)
-        line_found, cpose, curv,a,b,c = lateral_lane_filter.process(obs)
-        f = lambda x: int(a*x**2 + b*x + c)
-        df = lambda x: int(2*a*x + b)
+        #line_found, cpose, curv,a,b,c = lateral_lane_filter.process(obs)
+        line_found, cpose, curv = lateral_lane_filter.process(obs)
+        # f = lambda x: int(a*x**2 + b*x + c)
+        # df = lambda x: int(2*a*x + b)
         if line_found:
             robot_fpose = np.array([0.0, cpose[0], cpose[1]])
             pos_s, pos_d = planner.replanner(i)
             ts, td = pos_s[0], pos_d[0]
-            # target_pos = ts + compute_ortogonal_vect(df, np.array([f(ts), ts])) * td
-            # print(f'target_pos{target_pos}')
-            #Compute error
+            #target_pos = ts + compute_ortogonal_vect(df, np.array([f(ts), ts])) * td
+            #print(f'target_pos{target_pos}')
+            # Compute error
             error = np.array([0, pos_d[0]]) - robot_fpose[0:2]
             derror = np.array([pos_s[1], pos_d[1]])
             curvature = curv
@@ -95,10 +97,10 @@ def test_duckietown_planner(*args, **kwargs):
         """
         im.set_array(lateral_lane_filter.plot_image)
         im2.set_array(obs)
-    
-    
+        #scat.set_offsets(target_pos)
         env.render()
         return [im, im2, curve_line, curve_unwarped_line]
+        # return [im, im2, curve_line, curve_unwarped_line, scat]
     ani = animation.FuncAnimation(fig, animate, frames=500, interval=50, blit=True)
     plt.show()
     
