@@ -36,7 +36,8 @@ TEST_MAP = {
     'duckietown_manual' : test_duckietown,
     'semantic_mapper': test_semantic_mapper,
     'semantic_mapper_video': test_semantic_mapper_video,
-    'ransac': test_ransac,
+    'ransac': test_ransac, 
+    'duckietown_planner': test_duckietown_planner,
     'ekf_slam': test_ekf_slam
 }
 

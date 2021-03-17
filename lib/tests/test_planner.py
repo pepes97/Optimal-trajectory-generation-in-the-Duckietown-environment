@@ -147,14 +147,13 @@ def __simulate_experiment(sim_config, data_storage, trajectory, robot, transform
         pos_s, pos_d = planner.replanner(t_vect[i])
         ts, td = pos_s[0], pos_d[0]
         target_pos = trajectory.compute_pt(ts) + compute_ortogonal_vect(trajectory, ts) * td
-        target_fpos = transformer.transform(target_pos)
-        target_dpos = trajectory.compute_first_derivative(ts)
-        target_fdpos = transformer.transform(target_dpos)
-        # Compute error
-        #error = target_fpos - robot_fpose[0:2]
-        error = -robot_fpose[:2]
-        #derror = target_fdpos - robot_fdp
+        #Compute error
+        error = np.array([0, pos_d[0]]) - robot_fpose[0:2]
         derror = np.array([pos_s[1], pos_d[1]])
+        # Print check
+        logger.info(f'Planner s, d:{ts, td}')
+        logger.info(f'Robot s,d :{robot_fpose[:2]}')
+        logger.info(f'Error:{error}')
         # Get curvature
         curvature = trajectory.compute_curvature(est_pt)
         # Compute control
