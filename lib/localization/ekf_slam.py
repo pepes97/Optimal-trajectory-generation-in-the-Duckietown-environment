@@ -6,12 +6,13 @@ CONTROL_DIM = 2 # [v, w] in R2
 OBSERV_DIM = 2 # [x, y] in R2
 ASSOCIATION_DIM = 3 # [h, z, a_hz] in R3
 NOISE_U = 0.5 # control noise constant part
-NOISE_Z = 0.01 # measurement noise constant part
+NOISE_Z = 0.2 # measurement noise constant part
 NOISE_L = 2.0 # new landmark initial noise
 # yellow dashes are spaced 1 [inch] = 2,54 [cm]
 GATING_TAU = 0.0254 # omega L2 distance gating tau
 LONELY_GAMMA = 1e-4 # lonely best friend threshold
-DT = 0.015 # [s] env time interval
+FRAME_RATE = 66 # [1/s]
+DT = 1/FRAME_RATE # [s] env time interval
 VERBOSE = True # full debug
 
 class EKF_SLAM():
@@ -45,26 +46,26 @@ class EKF_SLAM():
         # are computed around the current mean of the estimate
         # Jacobian A: state transition matrix
         A = np.identity(state_dim,dtype=np.float32)
-        A[:ROBOT_DIM,:ROBOT_DIM] = np.array([[1,0,-v*np.sin(th)],\
-                                            [0,1,v*np.cos(th)],\
+        A[:ROBOT_DIM,:ROBOT_DIM] = np.array([[1,0,-DT*v*np.sin(th)],\
+                                            [0,1,DT*v*np.cos(th)],\
                                             [0,0,1]],dtype=np.float32)
         # Jacobian B: control input matrix
         B = np.zeros((state_dim,CONTROL_DIM),dtype=np.float32)
-        B[:ROBOT_DIM,:CONTROL_DIM] = np.array([[np.cos(th), 0],\
-                                                [np.sin(th),0],\
-                                                [0,1]],dtype=np.float32)
+        B[:ROBOT_DIM,:CONTROL_DIM] = np.array([[DT*np.cos(th), 0],\
+                                                [DT*np.sin(th),0],\
+                                                [0,DT]],dtype=np.float32)
         # inject noise on controls
         self.input_noise(inputs = inputs, A = A, B = B)
         
-    def transition(self, inputs: np.ndarray = np.zeros((CONTROL_DIM,),dtype=np.float32), dt: float = DT):
+    def transition(self, inputs: np.ndarray = np.zeros((CONTROL_DIM,),dtype=np.float32)):
         # predict the robot motion, the transition model f(x,u)
         # only affects the robot pose not the landmarks
         # odometry euler integration
         x, y, th = self.mu[0,0], self.mu[1,0], self.mu[2,0]
         v, w = inputs[0], inputs[1]
-        self.mu[0,0] = x + dt * v * np.cos(th)
-        self.mu[1,0] = y + dt * v * np.sin(th)
-        th = th + dt * w
+        self.mu[0,0] = x + DT * v * np.cos(th)
+        self.mu[1,0] = y + DT * v * np.sin(th)
+        th = th + DT * w
         self.mu[2,0] = np.arctan2(np.sin(th),np.cos(th))
 
         if VERBOSE :

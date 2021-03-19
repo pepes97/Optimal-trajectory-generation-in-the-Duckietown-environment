@@ -175,7 +175,7 @@ class SlidingWindowDoubleTracker:
         self.minimum_pixels = 1000
         self.contour_min_area = 200
         self.last_seen_yellow_pos = [np.array([320,240])]
-        self.max_line_offset = 140
+        self.max_line_offset = 250
         self.line_offset_mean = []
 
     def search(self, image_y, image_w, no_windows: int=9, margin: int=50, min_pix: int=1, draw_windows=False):
@@ -195,14 +195,30 @@ class SlidingWindowDoubleTracker:
             else:
                 lane_fit = lane_fit_y
                 offset = offset_y
-                line_offset = abs((lane_fit_w[2] - lane_fit_y[2]))//2
-                if line_offset<self.max_line_offset:
-                    self.line_offset_mean.append(line_offset)
-            
+            # we want to estimate the distance between the two parabola
+            # by looking at it's coefficients
+            a,b,c = lane_fit_y[0],lane_fit_y[1],lane_fit_y[2]
+            f = lambda x: int(a*x**2 + b*x + c)
+            p = 240 # query point
+            dirr = np.array([f(p-1),p-1],dtype=np.float32) - np.array([f(p+1),p+1],dtype=np.float32)
+            normal = dirr[::-1] * np.r_[1.,-1.]
+            normal = normal / np.linalg.norm(normal)
+            point = np.array([f(p),p],dtype=np.float32)
+            points_to_line = lambda p1,p2: ((p1[1]-p2[1])/(p1[0]-p2[0]),(p1[0]*p2[1]-p2[0]*p1[1])/(p1[0]-p2[0]))
+            m, q = points_to_line(point, point+normal)
+            a,b,c = lane_fit_w[0],lane_fit_w[1],lane_fit_w[2]
+            point_on_white = np.roots([c-q,b-m,a])
+            line_offset = np.linalg.norm(point-point_on_white).astype(int)//2
+
+            self.line_offset_mean.append(line_offset)
+        
             self.coeff_a.append(lane_fit[0])
             self.coeff_b.append(lane_fit[1])
             self.coeff_c.append(lane_fit[2])
         
+        def reject_outliers(data, m=10):
+                return data[abs(data - np.mean(data)) < m * np.std(data)]
+
         line_offset = np.mean(self.line_offset_mean[-self.robust_factor:])
         lane_fit[0] = np.mean(self.coeff_a[-self.robust_factor:])
         lane_fit[1] = np.mean(self.coeff_b[-self.robust_factor:])
@@ -350,7 +366,9 @@ class TrajectoryFilter():
         self.tracker = tracker
         self.line_found = False
         self.plot_image = None
-        self.trajectory_width = .21 #[m]
+        self.trajectory_width = 0.21 #[m]
+        self.white_tape = 0.048 #[m]
+        self.yellow_tape = 0.024 #[m]
 
     def process(self, frame) -> (bool, np.array):
         d = 0.0
@@ -363,17 +381,17 @@ class TrajectoryFilter():
         thresh_frame_w = self.filter_w.process(warped_frame)
         # Try to fit a quadratic curve to the mid line
         line_fit, self.plot_image, lane_offset, contours_midpt = self.tracker.search(image_y=thresh_frame_y, image_w=thresh_frame_w, draw_windows=True)
-        
+        lane_offset = 150
         lane_width = abs(lane_offset)*2
-        
-        pixel_ratio = self.trajectory_width/lane_width #[m/px]
+
+        pixel_ratio = (self.trajectory_width+self.yellow_tape/2+self.white_tape/2)/lane_width #[m/px]
 
         # move x axis to the center and y axis at the bottom
         observations = (np.array([[320,480]]) - contours_midpt) * pixel_ratio
         # from camera frame to world frame
         K1 = np.array([[1,0],
                         [0,-1]])
-        # from worls frame to robot frame
+        # from world frame to robot frame
         K2 = np.array([[0,-1],
                         [1,0]])
         # transform
@@ -406,11 +424,22 @@ class TrajectoryFilter():
                 orth = diff*np.r_[1,-1]
                 t = np.arctan2(orth[1],orth[0])
                 dirr = np.array([np.sin(t),np.cos(t)])
-                point_on_target = np.array(point_on_line - dirr * lane_offset ,np.int32)
+                point_on_target = np.array(point_on_line - dirr * (lane_offset - int(self.yellow_tape/2*1/pixel_ratio)),np.int32)
                 points_on_target.append(point_on_target)
-                cv2.circle(self.plot_image, tuple(point_on_target), 5, (0, 255, 0), -1)
                 cv2.circle(self.plot_image, tuple(point_on_line), 5, (255, 0, 0), -1)
 
+            points_on_target = np.stack(points_on_target)
+            line_fit = np.polyfit(points_on_target[:,1], points_on_target[:,0], 2)
+            a = line_fit[0]
+            b = line_fit[1]
+            c = line_fit[2]
+            f = lambda x: int(a*x**2 + b*x + c)
+            s = np.arange(0,480,20)
+            points_on_target = []
+            for y in s:
+                point_on_target = np.array([f(y),y],np.int32)
+                points_on_target.append(point_on_target)
+                cv2.circle(self.plot_image, tuple(point_on_target), 5, (0, 255, 0), -1)
             # # move x axis to the center and y axis at the bottom
             # points_on_target = (np.array([[320,480]]) - np.stack(points_on_target)) * pixel_ratio
             # # from camera frame to world frame

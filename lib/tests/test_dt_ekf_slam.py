@@ -49,12 +49,13 @@ class PerspectiveWarper:
         return cv2.warpPerspective(frame, self.iM, self.dest_size)
 
 
-u = np.array([0.5, 0.0])
+u = np.array([0.0, 0.0])
 observations = np.array([]).reshape(0,2)
+state = np.zeros((3,))
 
 def transition(state: np.ndarray = np.zeros((ROBOT_DIM,)), \
                 inputs: np.ndarray = np.zeros((CONTROL_DIM,),dtype=np.float32),\
-                dt: float = 0.015):
+                dt: float = 1/30):
     # predict the robot motion, the transition model f(x,u)
     # only affects the robot pose not the landmarks
     # odometry euler integration
@@ -62,7 +63,7 @@ def transition(state: np.ndarray = np.zeros((ROBOT_DIM,)), \
     x, y, th = state[0], state[1], state[2]
     v, w = inputs[0], inputs[1]
     next_state[0] = x + dt * v * np.cos(th)
-    next_state[1] = y + dt *v * np.sin(th)
+    next_state[1] = y + dt * v * np.sin(th)
     th = th + dt * w
     next_state[2] = np.arctan2(np.sin(th),np.cos(th))
     return next_state
@@ -88,16 +89,35 @@ def test_duckietown_ekf_slam(*args, **kwargs):
     obs, reward, done, info = env.step(np.array([0.0, 0.0]))
     im = ax[0].imshow(obs)
     im2 = ax[1].imshow(obs)
-    im3, = ax[2].plot([], [], 'ro')
-    im4, = ax[2].plot([], [], 'g*')
+    im1, = ax[2].plot([], [], 'b-')
+    im3, = ax[2].plot([], [], 'bo')
+    im4, = ax[2].plot([], [], 'rx')
+    im5, = ax[2].plot([], [], 'g-')
 
-    ax[2].set_xlim(-2,3)
-    ax[2].set_ylim(-1,4)
+    ax[2].set_xlim(-1,2)
+    ax[2].set_ylim(-1,2)
     
+    gt_states = []
+    ekf_states = []
+
     def animate(i):
         
         global u
+
+        global observations
+
+        global state
+
         obs, reward, done, info = env.step(u)
+
+        # inputs = np.array(info['Simulator']['action'],dtype=np.float32)
+        
+        inputs = u 
+
+        ekf.step(inputs = inputs, observed = observations)
+
+        state = transition(state = state, inputs = inputs, dt=DT)
+
         line_found, cpose, curv, observations = lateral_lane_filter.process(obs)
 
         if line_found:
@@ -108,16 +128,21 @@ def test_duckietown_ekf_slam(*args, **kwargs):
             u = controller.compute(robot_fpose, error, t_fvel, curvature)
             u = u / np.linalg.norm(u)
             u[1] *= -1
-            if np.isfinite(observations).all() and np.isfinite(u).all():
-                ekf.step(inputs = u, observed = observations)
-        
+
         mu_robot = ekf.mu[:ROBOT_DIM-1].reshape(-1,2)
         mu_landmarks = ekf.mu[ROBOT_DIM:].reshape(-1,2)
+        ekf_states.append(mu_robot)
+        gt_states.append(state)
+        gt_states_array = np.stack(gt_states)
+        ekf_states_array = np.concatenate(ekf_states,axis=0)
         im.set_array(lateral_lane_filter.plot_image)
         im2.set_array(obs)
         im3.set_data(mu_robot[:,0],mu_robot[:,1])
         im4.set_data(mu_landmarks[:,0],mu_landmarks[:,1])
+        im5.set_data(gt_states_array[:,0],gt_states_array[:,1])
+        im1.set_data(ekf_states_array[:,0],ekf_states_array[:,1])
         env.render()
-        return [im, im2, im3, im4]
+
+        return [im, im2, im5, im4, im1, im3]
     ani = animation.FuncAnimation(fig, animate, frames=500, interval=20, blit=True)
     plt.show()
