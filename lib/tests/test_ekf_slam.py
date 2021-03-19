@@ -6,16 +6,16 @@ from matplotlib.animation import FuncAnimation
 np.random.seed(41296)
 
 def transition(state: np.ndarray = np.zeros((ROBOT_DIM,)), \
-                inputs: np.ndarray = np.zeros((CONTROL_DIM,),dtype=np.float32)):
+                inputs: np.ndarray = np.zeros((CONTROL_DIM,),dtype=np.float32), dt : float = DT):
     # predict the robot motion, the transition model f(x,u)
     # only affects the robot pose not the landmarks
     # odometry euler integration
     next_state = np.zeros((ROBOT_DIM,))
     x, y, th = state[0], state[1], state[2]
     v, w = inputs[0], inputs[1]
-    next_state[0] = x + v * np.cos(th)
-    next_state[1] = y + v * np.sin(th)
-    th = th + w
+    next_state[0] = x + dt * v * np.cos(th)
+    next_state[1] = y + dt * v * np.sin(th)
+    th = th + dt * w
     next_state[2] = np.arctan2(np.sin(th),np.cos(th))
     return next_state
 
@@ -66,9 +66,9 @@ def rand_map(steps: int = 100, map_size: int = 10, \
         observations.append(sense(state, landmarks, sensor_radius).copy())
 
     if plot:
-        plt.plot(states[0,0],states[0,1],'ro')
-        plt.plot(states[-1,0],states[-1,1],'rx')
-        plt.plot(states[:,0],states[:,1],'r-')
+        plt.plot(states[0,0],states[0,1],'go')
+        plt.plot(states[-1,0],states[-1,1],'gx')
+        plt.plot(states[:,0],states[:,1],'g-')
         plt.plot(landmarks[:,0],landmarks[:,1],'bo')
         plt.show()
     
@@ -96,10 +96,12 @@ def test_ekf_slam(*args, **kwargs):
 
     fig, ax = plt.subplots()
     real_state_plt, = plt.plot([], [], 'g-')
-    real_landmark_plt, = plt.plot([], [], 'g*')
+    real_landmark_plt, = plt.plot([], [], 'bo')
+    obs_landmark_plt, = plt.plot([], [], 'go')
     predicted_state_plt, = plt.plot([], [], 'r-')
     predicted_landmark_plt, = plt.plot([], [], 'r*')
     real_landmarks = []
+    observed_landmarks = []
     real_states = []
     predicted_states = []
 
@@ -132,12 +134,13 @@ def test_ekf_slam(*args, **kwargs):
         predicted_landmark = ekf.mu[ROBOT_DIM:].reshape(-1,2)
         predicted_state = np.concatenate(predicted_states,axis=0)
 
+        real_landmark_plt.set_data(landmarks[:,0],landmarks[:,1])
         real_state_plt.set_data(real_state[:,0], real_state[:,1])
-        real_landmark_plt.set_data(real_landmark[:,0], real_landmark[:,1])
+        obs_landmark_plt.set_data(real_landmark[:,0], real_landmark[:,1])
         predicted_state_plt.set_data(predicted_state[:,0], predicted_state[:,1])
         predicted_landmark_plt.set_data(predicted_landmark[:,0], predicted_landmark[:,1])
         
-        return real_state_plt, real_landmark_plt, predicted_state_plt, predicted_landmark_plt
+        return real_state_plt, real_landmark_plt, obs_landmark_plt, predicted_state_plt, predicted_landmark_plt
 
     ani = FuncAnimation(fig, update, frames=np.arange(0, steps),
                         init_func=init, blit=True, repeat=False)

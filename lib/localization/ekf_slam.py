@@ -5,18 +5,21 @@ LANDMARK_DIM = 2 # [x, y] in R2
 CONTROL_DIM = 2 # [v, w] in R2
 OBSERV_DIM = 2 # [x, y] in R2
 ASSOCIATION_DIM = 3 # [h, z, a_hz] in R3
-NOISE_U = 0.1 # control noise constant part
+NOISE_U = 0.5 # control noise constant part
 NOISE_Z = 0.01 # measurement noise constant part
 NOISE_L = 2.0 # new landmark initial noise
-GATING_TAU = 2.0 # omega L2 distance gating tau
-LONELY_GAMMA = 1e-3 # lonely best friend threshold
+# yellow dashes are spaced 1 [inch] = 2,54 [cm]
+GATING_TAU = 0.0254 # omega L2 distance gating tau
+LONELY_GAMMA = 1e-4 # lonely best friend threshold
+DT = 0.015 # [s] env time interval
+VERBOSE = True # full debug
 
 class EKF_SLAM():
     def __init__(self):
         # initial state in SE2 [x, y, theta]
         self.mu = np.zeros((3,1), dtype=np.float32)
         self.sigma = np.zeros((3,3), dtype=np.float32) 
-        print("initial pose: {}".format(str(self.mu.T)))
+        print(f'mu={self.mu[:ROBOT_DIM].flatten()}')
 
     def step(self, inputs: np.ndarray = np.zeros((CONTROL_DIM,),dtype=np.float32), \
                   observed: np.ndarray = np.zeros((1,LANDMARK_DIM),dtype=np.float32)):
@@ -43,26 +46,29 @@ class EKF_SLAM():
         # Jacobian A: state transition matrix
         A = np.identity(state_dim,dtype=np.float32)
         A[:ROBOT_DIM,:ROBOT_DIM] = np.array([[1,0,-v*np.sin(th)],\
-                                                    [0,1,v*np.cos(th)],\
-                                                    [0,0,1]],dtype=np.float32)
+                                            [0,1,v*np.cos(th)],\
+                                            [0,0,1]],dtype=np.float32)
         # Jacobian B: control input matrix
         B = np.zeros((state_dim,CONTROL_DIM),dtype=np.float32)
         B[:ROBOT_DIM,:CONTROL_DIM] = np.array([[np.cos(th), 0],\
-                                                        [np.sin(th),0],\
-                                                        [0,1]],dtype=np.float32)
+                                                [np.sin(th),0],\
+                                                [0,1]],dtype=np.float32)
         # inject noise on controls
         self.input_noise(inputs = inputs, A = A, B = B)
         
-    def transition(self, inputs: np.ndarray = np.zeros((CONTROL_DIM,),dtype=np.float32)):
+    def transition(self, inputs: np.ndarray = np.zeros((CONTROL_DIM,),dtype=np.float32), dt: float = DT):
         # predict the robot motion, the transition model f(x,u)
         # only affects the robot pose not the landmarks
         # odometry euler integration
         x, y, th = self.mu[0,0], self.mu[1,0], self.mu[2,0]
         v, w = inputs[0], inputs[1]
-        self.mu[0,0] = x + v * np.cos(th)
-        self.mu[1,0] = y + v * np.sin(th)
-        th = th + w
+        self.mu[0,0] = x + dt * v * np.cos(th)
+        self.mu[1,0] = y + dt * v * np.sin(th)
+        th = th + dt * w
         self.mu[2,0] = np.arctan2(np.sin(th),np.cos(th))
+
+        if VERBOSE :
+            print(f'mu={self.mu[:ROBOT_DIM].flatten()}')
 
     def input_noise(self, inputs: np.ndarray = np.zeros((CONTROL_DIM,),dtype=np.float32), \
                     A: np.ndarray = np.identity(ROBOT_DIM,dtype=np.float32), \
@@ -156,6 +162,7 @@ class EKF_SLAM():
         n = np.take(n, indices_ok, axis=0)[...,None]
         a_mn = np.take(a_mn, indices_ok, axis=0)[...,None]
         associations = np.concatenate([m,n,a_mn],axis=-1)
+
         return associations, new_indices
 
     def best_friend(self, associations: np.ndarray = np.zeros((1,ASSOCIATION_DIM),dtype=np.float32), \
@@ -215,7 +222,7 @@ class EKF_SLAM():
         associations, lbf_pruned_indices = self.lonely_best_friend(associations = associations, A = A)
         # pruned associations are the ones that may lead to bad associations
         doubtful_indices = np.concatenate([bf_pruned_indices, lbf_pruned_indices],axis=0)
-        
+
         return associations, new_indices, doubtful_indices
 
     def associate(self, landmarks: np.ndarray = np.zeros((1,LANDMARK_DIM),dtype=np.float32), \
@@ -226,6 +233,9 @@ class EKF_SLAM():
         # use heuristics to avoid bad associations
         associations, new_indices, doubtful_indices = self.prune_heuristics(A = A)
 
+        if VERBOSE :
+            print(f'match={associations.shape[0]}, new={new_indices.shape[0]}, pruned={doubtful_indices.shape[0]}')
+        
         return associations, new_indices, doubtful_indices
 
     def correct(self, observed: np.ndarray = np.zeros((1,OBSERV_DIM),dtype=np.float32)):
@@ -247,7 +257,9 @@ class EKF_SLAM():
         associations, new_indices, doubtful_indices = self.associate(landmarks = landmarks, observed = observed)
         # count how many observations of old landmarks we have
         num_known = associations.shape[0]
-        if num_known == 0 : return
+        if num_known == 0 :
+            self.add_landmarks(new_indices = np.arange(observed.shape[0]), observed = observed)
+            return
         zt = np.zeros((num_known * OBSERV_DIM, 1))
         ht = np.zeros((num_known * OBSERV_DIM, 1))
         Ct = np.zeros((num_known * OBSERV_DIM, self.mu.shape[0]))
@@ -274,6 +286,10 @@ class EKF_SLAM():
         self.mu = self.mu + K @ ni
         # update sigma
         self.sigma = (np.identity(self.mu.shape[0], dtype=np.float32) - K @ Ct) @ self.sigma
+
+        if VERBOSE :
+            print(f'total landmarks={self.mu[ROBOT_DIM:].shape[0]//2}')
+
         # add new landmarks to the state
         if new_indices.shape[0] == 0 : return
         self.add_landmarks(new_indices = new_indices, observed = observed)

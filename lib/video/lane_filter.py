@@ -182,12 +182,13 @@ class SlidingWindowDoubleTracker:
         test_image_y = np.dstack((image_y, image_y, image_y))
         test_image_w = np.dstack((image_w, image_w, image_w))
         offset = 1
+        contours_midpt = np.array([]).reshape(0,2)
         
         if np.count_nonzero(image_y) < self.minimum_pixels and np.count_nonzero(image_w) < self.minimum_pixels:
             lane_fit = np.zeros(3)
         else:
             lane_fit_w, offset_w = self.white_line_fit(image_w, test_image_w, draw_windows)
-            lane_fit_y, offset_y = self.yellow_line_fit(image_y, test_image_y, draw_windows)
+            lane_fit_y, offset_y, contours_midpt = self.yellow_line_fit(image_y, test_image_y, draw_windows)
             if np.count_nonzero(image_y) < self.minimum_pixels:
                 lane_fit = lane_fit_w
                 offset = offset_w
@@ -210,13 +211,14 @@ class SlidingWindowDoubleTracker:
         test_image = test_image_y+test_image_w     
         # last_seen_yellow_pos = np.mean(self.last_seen_yellow_pos[-self.robust_factor:],axis=0) 
         
-        return lane_fit, test_image, offset * line_offset
+        return lane_fit, test_image, offset * line_offset, contours_midpt
 
     def yellow_line_fit(self, image_y, test_image_y, draw_windows):
         # Find Contours yellow
         contours_y, _ = cv2.findContours(image_y, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         contours_y = list(filter(lambda ctr: cv2.contourArea(ctr) > self.contour_min_area, contours_y))
         contours_midpt = []
+        offset = 1
         for ctr in contours_y:
             ctr_moment = cv2.moments(ctr)
             px = int(ctr_moment['m10'] / ctr_moment['m00'])
@@ -238,7 +240,7 @@ class SlidingWindowDoubleTracker:
             lane_y = contours_midpt[:, 1]
             lane_fit = np.polyfit(lane_y, lane_x, 2)
             
-        return lane_fit, 1
+        return lane_fit, offset, contours_midpt
     
     def white_line_fit(self,image_w,test_image_w,draw_windows):
         last_seen_yellow_pos = np.mean(self.last_seen_yellow_pos[-self.robust_factor:],axis=0)
@@ -360,11 +362,22 @@ class TrajectoryFilter():
         thresh_frame_y = self.filter_y.process(warped_frame)
         thresh_frame_w = self.filter_w.process(warped_frame)
         # Try to fit a quadratic curve to the mid line
-        line_fit, self.plot_image, lane_offset = self.tracker.search(image_y=thresh_frame_y, image_w=thresh_frame_w, draw_windows=True)
+        line_fit, self.plot_image, lane_offset, contours_midpt = self.tracker.search(image_y=thresh_frame_y, image_w=thresh_frame_w, draw_windows=True)
         
         lane_width = abs(lane_offset)*2
         
         pixel_ratio = self.trajectory_width/lane_width #[m/px]
+
+        # move x axis to the center and y axis at the bottom
+        observations = (np.array([[320,480]]) - contours_midpt) * pixel_ratio
+        # from camera frame to world frame
+        K1 = np.array([[1,0],
+                        [0,-1]])
+        # from worls frame to robot frame
+        K2 = np.array([[0,-1],
+                        [1,0]])
+        # transform
+        observations = (K2 @ K1 @ observations.T).T
 
         if (line_fit != np.zeros(3)).all():
             # Line is found
@@ -398,6 +411,20 @@ class TrajectoryFilter():
                 cv2.circle(self.plot_image, tuple(point_on_target), 5, (0, 255, 0), -1)
                 cv2.circle(self.plot_image, tuple(point_on_line), 5, (255, 0, 0), -1)
 
+            # # move x axis to the center and y axis at the bottom
+            # points_on_target = (np.array([[320,480]]) - np.stack(points_on_target)) * pixel_ratio
+            # # from camera frame to world frame
+            # K1 = np.array([[1,0],
+            #                 [0,-1]])
+            # # from worls frame to robot frame
+            # K2 = np.array([[0,-1],
+            #                 [1,0]])
+            # # transform
+            # points_on_target = (K2 @ K1 @ points_on_target.T).T
+            # # invert order
+            # points_on_target = points_on_target[::2]
+            # index = 0
+
             points_on_target = np.stack(points_on_target) * pixel_ratio
             index = len(points_on_target)//2
             d = (320 * pixel_ratio - points_on_target[index,0]) 
@@ -409,7 +436,7 @@ class TrajectoryFilter():
             curv = (t1-t) / (np.linalg.norm(tt))
         else:
             self.line_found = False
-        return self.line_found, np.float32([d, t]), curv
+        return self.line_found, np.float32([d, t]), curv, observations
 
 class RedFilter:
     def __init__(self, *args, **kwargs):

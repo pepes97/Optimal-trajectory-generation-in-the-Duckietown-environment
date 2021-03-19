@@ -19,3 +19,4 @@ from .test_dt import test_duckietown
 from .test_semantic_mapper import test_semantic_mapper, test_semantic_mapper_video, test_ransac
 from .test_dt_planner import test_duckietown_planner
 from .test_ekf_slam import test_ekf_slam
+from .test_dt_ekf_slam import test_duckietown_ekf_slam
