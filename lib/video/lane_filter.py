@@ -304,10 +304,6 @@ class SlidingWindowDoubleTracker:
             lane_fit = np.polyfit(lane_y, lane_x, 2)
         return lane_fit, offset
             
-# class SlidingWindowDoubleTracker:
-#     # TODO
-#     def __init__(self):
-#         pass
 
 class MiddleLineFilter():
     """ Finds and tracks the middle dashed yellow line.

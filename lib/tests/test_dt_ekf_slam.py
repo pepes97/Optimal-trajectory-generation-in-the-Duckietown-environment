@@ -49,22 +49,18 @@ class PerspectiveWarper:
         return cv2.warpPerspective(frame, self.iM, self.dest_size)
 
 
-u = np.array([0.0, 0.0])
-observations = np.array([]).reshape(0,2)
-state = np.zeros((3,))
-
 def transition(state: np.ndarray = np.zeros((ROBOT_DIM,)), \
-                inputs: np.ndarray = np.zeros((CONTROL_DIM,),dtype=np.float32),\
-                dt: float = 1/30):
+                controls: np.ndarray = np.zeros((CONTROL_DIM,),dtype=np.float32)):
     # predict the robot motion, the transition model f(x,u)
     # only affects the robot pose not the landmarks
     # odometry euler integration
     next_state = np.zeros((ROBOT_DIM,))
     x, y, th = state[0], state[1], state[2]
-    v, w = inputs[0], inputs[1]
-    next_state[0] = x + dt * v * np.cos(th)
-    next_state[1] = y + dt * v * np.sin(th)
-    th = th + dt * w
+    # dp, dth are infinitesimal increment dp = DT * v , dth = DT * w
+    dp, dth = controls[0], controls[1]
+    next_state[0] = x + dp * np.cos(th)
+    next_state[1] = y + dp * np.sin(th)
+    th = th + dth
     next_state[2] = np.arctan2(np.sin(th),np.cos(th))
     return next_state
 
@@ -78,7 +74,6 @@ def test_duckietown_ekf_slam(*args, **kwargs):
     perspective_projector = PerspectiveWarper()
     line_filter = CenterLineFilter()
     line_tracker = SlidingWindowTracker(robust_factor=1)
-    middle_lane_filter = MiddleLineFilter(perspective_projector, line_filter, line_tracker)
     lat_line_filter = LateralLineFilter()
     lat_line_tracker = SlidingWindowDoubleTracker(robust_factor=1)
     lateral_lane_filter = TrajectoryFilter(perspective_projector, line_filter, lat_line_filter, lat_line_tracker)
@@ -86,13 +81,13 @@ def test_duckietown_ekf_slam(*args, **kwargs):
     fig, ax = plt.subplots(1, 3)
     env.reset()
     env.render()
-    obs, reward, done, info = env.step(np.array([0.0, 0.0]))
+    obs, *_ = env.step(np.array([0.0, 0.0]))
     im = ax[0].imshow(obs)
     im2 = ax[1].imshow(obs)
-    im1, = ax[2].plot([], [], 'b-')
-    im3, = ax[2].plot([], [], 'bo')
-    im4, = ax[2].plot([], [], 'rx')
-    im5, = ax[2].plot([], [], 'g-')
+    im1, = ax[2].plot([], [], 'b-') # estimate path
+    im3, = ax[2].plot([], [], 'bo') # estimate current position
+    im4, = ax[2].plot([], [], 'rx') # estimate landmarks
+    im5, = ax[2].plot([], [], 'g-') # odometry only path
 
     ax[2].set_xlim(-1,2)
     ax[2].set_ylim(-1,2)
@@ -100,23 +95,27 @@ def test_duckietown_ekf_slam(*args, **kwargs):
     gt_states = []
     ekf_states = []
 
+    global u, state, observations
+
+    u = np.array([0.0, 0.0])
+    observations = np.array([]).reshape(0,2)
+    state = np.zeros((3,))
+
     def animate(i):
         
-        global u
+        global u, state, observations
 
-        global observations
+        obs, _, _, info = env.step(u)
 
-        global state
+        # PROBLEM
+        controls = np.array(info['Simulator']['action'],dtype=np.float32) * DT
 
-        obs, reward, done, info = env.step(u)
+        # PROBLEM
+        controls = u * DT
 
-        # inputs = np.array(info['Simulator']['action'],dtype=np.float32)
-        
-        inputs = u 
+        ekf.step(controls = controls, observations = observations)
 
-        ekf.step(inputs = inputs, observed = observations)
-
-        state = transition(state = state, inputs = inputs, dt=DT)
+        state = transition(state = state, controls = controls)
 
         line_found, cpose, curv, observations = lateral_lane_filter.process(obs)
 
