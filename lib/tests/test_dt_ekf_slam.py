@@ -84,9 +84,9 @@ def test_duckietown_ekf_slam(*args, **kwargs):
     obs, *_ = env.step(np.array([0.0, 0.0]))
     im = ax[0].imshow(obs)
     im2 = ax[1].imshow(obs)
-    im1, = ax[2].plot([], [], 'b-') # estimate path
-    im3, = ax[2].plot([], [], 'bo') # estimate current position
-    im4, = ax[2].plot([], [], 'rx') # estimate landmarks
+    im1, = ax[2].plot([], [], 'b-') # estimated path
+    im3, = ax[2].plot([], [], 'bo') # estimated current position
+    im4, = ax[2].plot([], [], 'rx') # estimated landmarks
     im5, = ax[2].plot([], [], 'g-') # odometry only path
 
     ax[2].set_xlim(-1,2)

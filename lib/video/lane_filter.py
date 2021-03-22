@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 import functools
 from .utils import *
 from .binarize import *
+from ..trajectory import Trajectory
 
 class CenterLineFilter:
     def __init__(self):
@@ -174,8 +175,8 @@ class SlidingWindowDoubleTracker:
         # Minimum mask pixels to initiate line search
         self.minimum_pixels = 1000
         self.contour_min_area = 200
-        self.last_seen_yellow_pos = [np.array([320,240])]
-        self.max_line_offset = 250
+        self.last_seen_yellow_pos = [np.array([320,480])]
+        self.max_line_offset = 150
         self.line_offset_mean = []
 
     def search(self, image_y, image_w, no_windows: int=9, margin: int=50, min_pix: int=1, draw_windows=False):
@@ -183,7 +184,8 @@ class SlidingWindowDoubleTracker:
         test_image_w = np.dstack((image_w, image_w, image_w))
         offset = 1
         contours_midpt = np.array([]).reshape(0,2)
-        
+        line_offset = self.max_line_offset
+
         if np.count_nonzero(image_y) < self.minimum_pixels and np.count_nonzero(image_w) < self.minimum_pixels:
             lane_fit = np.zeros(3)
         else:
@@ -197,18 +199,19 @@ class SlidingWindowDoubleTracker:
                 offset = offset_y
             # we want to estimate the distance between the two parabola
             # by looking at it's coefficients
-            a,b,c = lane_fit_y[0],lane_fit_y[1],lane_fit_y[2]
-            f = lambda x: int(a*x**2 + b*x + c)
-            p = 240 # query point
-            dirr = np.array([f(p-1),p-1],dtype=np.float32) - np.array([f(p+1),p+1],dtype=np.float32)
-            normal = dirr[::-1] * np.r_[1.,-1.]
-            normal = normal / np.linalg.norm(normal)
-            point = np.array([f(p),p],dtype=np.float32)
-            points_to_line = lambda p1,p2: ((p1[1]-p2[1])/(p1[0]-p2[0]),(p1[0]*p2[1]-p2[0]*p1[1])/(p1[0]-p2[0]))
-            m, q = points_to_line(point, point+normal)
-            a,b,c = lane_fit_w[0],lane_fit_w[1],lane_fit_w[2]
-            point_on_white = np.roots([c-q,b-m,a])
-            line_offset = np.linalg.norm(point-point_on_white).astype(int)//2
+            if np.isfinite(lane_fit_y).all():
+                a,b,c = lane_fit_y[0],lane_fit_y[1],lane_fit_y[2]
+                f = lambda x: int(a*x**2 + b*x + c)
+                p = 240 # query point
+                dirr = np.array([f(p-1),p-1],dtype=np.float32) - np.array([f(p+1),p+1],dtype=np.float32)
+                normal = dirr[::-1] * np.r_[1.,-1.]
+                normal = normal / np.linalg.norm(normal)
+                point = np.array([f(p),p],dtype=np.float32)
+                points_to_line = lambda p1,p2: ((p1[1]-p2[1])/(p1[0]-p2[0]),(p1[0]*p2[1]-p2[0]*p1[1])/(p1[0]-p2[0]))
+                m, q = points_to_line(point, point+normal)
+                a,b,c = lane_fit_w[0],lane_fit_w[1],lane_fit_w[2]
+                point_on_white = np.roots([c-q,b-m,a])
+                line_offset = np.linalg.norm(point-point_on_white).astype(int)//2
 
             self.line_offset_mean.append(line_offset)
         
@@ -250,6 +253,7 @@ class SlidingWindowDoubleTracker:
             lane_fit[0] = np.mean(self.coeff_a[-self.robust_factor:])
             lane_fit[1] = np.mean(self.coeff_b[-self.robust_factor:])
             lane_fit[2] = np.mean(self.coeff_c[-self.robust_factor:])
+            contours_midpt = np.array([]).reshape(0,2)
         else:
             self.last_seen_yellow_pos.append(np.mean(contours_midpt,axis=0))
             lane_x = contours_midpt[:, 0]
@@ -365,7 +369,85 @@ class TrajectoryFilter():
         self.trajectory_width = 0.21 #[m]
         self.white_tape = 0.048 #[m]
         self.yellow_tape = 0.024 #[m]
+        self.pixel_ratio = 0.00082 #[px/m]
+        self.planner = None
+        self.K2R = np.array([[0, -self.pixel_ratio, 480*self.pixel_ratio],
+                            [-self.pixel_ratio, 0, 320*self.pixel_ratio],
+                            [0, 0, 1]],dtype=np.float64)
+        self.R2K = np.linalg.inv(self.K2R)
+        self.K2W = np.array([[self.pixel_ratio, 0, 0],
+                            [0, -self.pixel_ratio, 480*self.pixel_ratio],
+                            [0, 0, 1]],dtype=np.float64)
+        self.W2K = np.linalg.inv(self.K2W)
+            
+    def rob2cam(self, robot_points: np.ndarray) -> np.ndarray: 
+        # homogeneous vector
+        robot_points = np.c_[robot_points, np.ones(robot_points.shape[0])] 
+        # homogeneous matrix
+        camera_points = (self.R2K @ robot_points.T).T
+        # euclidean vector
+        camera_points = camera_points[:,:-1]
+        # invert order to have min y in first position
+        camera_points = camera_points[::-1]
+        return camera_points.round().astype(int)
 
+    def cam2rob(self, camera_points: np.ndarray) -> np.ndarray: 
+        # homogeneous vector
+        camera_points = np.c_[camera_points, np.ones(camera_points.shape[0])] 
+        # homogeneous matrix
+        robot_points = (self.K2R @ camera_points.T).T
+        # euclidean vector
+        robot_points = robot_points[:,:-1]
+        # invert order to have min y in first position
+        robot_points = robot_points[::-1]
+        return robot_points
+    
+    # def cam2world(self, camera_points: np.ndarray) -> np.ndarray: 
+    #     # homogeneous vector
+    #     camera_points = np.c_[camera_points, np.ones(camera_points.shape[0])] 
+    #     # homogeneous matrix
+    #     world_points = (self.K2W @ camera_points.T).T
+    #     # euclidean vector
+    #     world_points = world_points[:,:-1]
+    #     # invert order to have min y in first position
+    #     world_points = world_points[::-1]
+    #     return world_points
+    
+    # def world2cam(self, world_points: np.ndarray) -> np.ndarray: 
+    #     # homogeneous vector
+    #     world_points = np.c_[world_points, np.ones(world_points.shape[0])] 
+    #     # homogeneous matrix
+    #     camera_points = (self.W2K @ world_points.T).T
+    #     # euclidean vector
+    #     camera_points = camera_points[:,:-1]
+    #     # invert order to have min y in first position
+    #     camera_points = camera_points[::-1]
+    #     return camera_points.round().astype(int)
+
+    def process_target(self, line_fit, lane_offset):
+        a, b, c = line_fit
+        target = []
+        xx = lambda y: int(a*y**2 + b*y + c)
+        yy = np.arange(0,480,20)
+        for i in range(yy.shape[0]-1):
+            point_on_line = np.array([xx(yy[i]),yy[i]],np.int32)
+            cv2.circle(self.plot_image, tuple(point_on_line), 5, (255, 0, 0), -1)
+            diff = point_on_line - np.array([xx(yy[i+1]),yy[i+1]],np.int32)
+            th = np.arctan2(diff[1],diff[0])
+            dirr = np.array([-np.sin(th),np.cos(th)])
+            point_on_target = np.array(point_on_line + dirr * (lane_offset - int(self.yellow_tape/2*1/self.pixel_ratio)),np.int32)
+            target.append(point_on_target)
+        target = np.stack(target)
+        a, b, c = np.polyfit(target[:,1], target[:,0], 2)
+        xx = lambda y: int(a*y**2 + b*y + c)
+        yy = np.arange(0,480,20)
+        target = []
+        for y in yy:
+            point_on_target = np.array([xx(y),y],np.int32)
+            target.append(point_on_target)
+            cv2.circle(self.plot_image, tuple(point_on_target), 5, (0, 255, 0), -1)
+        return np.array(target)
+ 
     def process(self, frame) -> (bool, np.array):
         d = 0.0
         t = 0.0
@@ -379,88 +461,64 @@ class TrajectoryFilter():
         line_fit, self.plot_image, lane_offset, contours_midpt = self.tracker.search(image_y=thresh_frame_y, image_w=thresh_frame_w, draw_windows=True)
         lane_offset = 150
         lane_width = abs(lane_offset)*2
-
-        pixel_ratio = (self.trajectory_width+self.yellow_tape/2+self.white_tape/2)/lane_width #[m/px]
-
-        # move x axis to the center and y axis at the bottom
-        observations = (np.array([[320,480]]) - contours_midpt) * pixel_ratio
-        # from camera frame to world frame
-        K1 = np.array([[1,0],
-                        [0,-1]])
-        # from world frame to robot frame
-        K2 = np.array([[0,-1],
-                        [1,0]])
-        # transform
-        observations = (K2 @ K1 @ observations.T).T
-
-        if (line_fit != np.zeros(3)).all():
+        # self.pixel_ratio = (self.trajectory_width+self.yellow_tape/2+self.white_tape/2)/lane_width #[m/px]
+        observations = self.cam2rob(contours_midpt)
+        if (line_fit != np.zeros(3)).all() and np.isfinite(line_fit).all():
             # Line is found
             self.line_found = True
             # Compute d and t
-            a = line_fit[0]
-            b = line_fit[1]
-            c = line_fit[2]
-            verbose = 0
-            if verbose:
-                if a>0:
-                    print('turn right')
-                else:
-                    print('turn left')
-            points_on_line = []
-            points_on_target = []
-            f = lambda x: int(a*x**2 + b*x + c)
-            s = np.arange(0,480,20)
-            point_on_line = np.array([f(s[0]),s[0]],np.int32)
-            points_on_line.append(point_on_line)
-            for i,y in enumerate(s[1:]):
-                point_on_line = np.array([f(y),y],np.int32)
-                points_on_line.append(point_on_line)
-                k = i+1
-                diff = points_on_line[k] - points_on_line[k-1]
-                orth = diff*np.r_[1,-1]
-                t = np.arctan2(orth[1],orth[0])
-                dirr = np.array([np.sin(t),np.cos(t)])
-                point_on_target = np.array(point_on_line - dirr * (lane_offset - int(self.yellow_tape/2*1/pixel_ratio)),np.int32)
-                points_on_target.append(point_on_target)
-                cv2.circle(self.plot_image, tuple(point_on_line), 5, (255, 0, 0), -1)
+            target = self.process_target(line_fit, lane_offset)
+            target_planner = []
+            xy0 = xy1 = np.array([0.0,0.0])
+            if self.planner is not None:
+                points_on_target_p = self.cam2rob(np.stack(target))
+                a, b, c = np.polyfit(points_on_target_p[:,0], points_on_target_p[:,1], 2)
+                trajectory = Trajectory()
+                trajectory.compute_pt = lambda x: np.array([x, a*x**2 + b*x + c])
+                trajectory.compute_first_derivative = lambda x: np.array([x, 2*a*x + b])
+                s0 = estimatePosition(trajectory, np.array([0.0,0.0]))
+                xy0 = trajectory.compute_pt(s0)
+                points_planner = frenet_to_glob(trajectory, self.planner, s0)
+                points_planner = np.array(points_planner)
+                xy1 = points_planner[0]
+                a, b, c = np.polyfit(points_planner[:,0], points_planner[:,1], 2)
+                yy = lambda x: a*x**2 + b*x + c
+                xx = np.arange(0,480,20) * self.pixel_ratio
+                for x in xx:
+                    point_planner = np.array([x,yy(x)],dtype=np.float32)
+                    target_planner.append(point_planner)
+                target_planner = self.rob2cam(np.array(target_planner))
+                for points in target_planner:
+                    cv2.circle(self.plot_image, tuple(points), 5, (0, 0, 255), -1)
+                cv2.circle(self.plot_image, tuple(target_planner[-1]), 10, (0, 0, 255), -1) # first planner point
+            else:
+                target_planner = target
+            # move x axis to the center and y axis at the bottom
+            # from camera frame to world frame
+            # transform 
+            # distance from origin (0,0) in robot frame
+            d = np.sign(xy0[1])*np.linalg.norm(xy0)
 
-            points_on_target = np.stack(points_on_target)
-            line_fit = np.polyfit(points_on_target[:,1], points_on_target[:,0], 2)
-            a = line_fit[0]
-            b = line_fit[1]
-            c = line_fit[2]
-            f = lambda x: int(a*x**2 + b*x + c)
-            s = np.arange(0,480,20)
-            points_on_target = []
-            for y in s:
-                point_on_target = np.array([f(y),y],np.int32)
-                points_on_target.append(point_on_target)
-                cv2.circle(self.plot_image, tuple(point_on_target), 5, (0, 255, 0), -1)
-            # # move x axis to the center and y axis at the bottom
-            # points_on_target = (np.array([[320,480]]) - np.stack(points_on_target)) * pixel_ratio
-            # # from camera frame to world frame
-            # K1 = np.array([[1,0],
-            #                 [0,-1]])
-            # # from worls frame to robot frame
-            # K2 = np.array([[0,-1],
-            #                 [1,0]])
-            # # transform
-            # points_on_target = (K2 @ K1 @ points_on_target.T).T
-            # # invert order
-            # points_on_target = points_on_target[::2]
-            # index = 0
-
-            points_on_target = np.stack(points_on_target) * pixel_ratio
-            index = len(points_on_target)//2
-            d = (320 * pixel_ratio - points_on_target[index,0]) 
-            t = points_on_target[index+1] - points_on_target[index]
-            t = np.pi/2 - np.arctan2(t[1], t[0])
+            xy0p = self.rob2cam(np.array([xy0]))[0] # projection point
+            xy1p = self.rob2cam(np.array([xy1]))[0] # first planner trajectory point
+            cv2.circle(self.plot_image, tuple(xy0p), 10, (0, 0, 255), -1)
+            cv2.circle(self.plot_image, tuple(xy1p), 10, (255, 255, 255), -1)
+            
+            target = self.cam2rob(np.stack(target_planner))
+            index = len(target)//2
+            t = target[index+1] - target[index]
+            t =  np.arctan2(t[1], t[0]) #- np.pi/2
             # compute curvature
-            tt = points_on_target[index+2] - points_on_target[index]
-            t1 = np.pi/2 - np.arctan2(tt[1], tt[0])
+            tt = target[index+2] - target[index+1]
+            t1 = np.arctan2(tt[1], tt[0]) # - np.pi/2
             curv = (t1-t) / (np.linalg.norm(tt))
+            points = self.rob2cam(target)[::-1]
+            cv2.arrowedLine(self.plot_image, (320, 480), (320+(points[index+2,0]-points[index,0]), 480+(points[index+2,1]-points[index,1])), (0, 255, 0), 5)
+            cv2.arrowedLine(self.plot_image, (320, 480), (xy0p[0], xy0p[1]), (255, 0, 0), 5) # distance to projection
         else:
             self.line_found = False
+        
+        # self.plot_image = self.projector.iwarp(self.plot_image) # go back to street view
         return self.line_found, np.float32([d, t]), curv, observations
 
 class RedFilter:
@@ -469,3 +527,73 @@ class RedFilter:
 
     def process(self, frame):
         return np.zeros((frame.shape[0], frame.shape[1], 1), dtype='uint8')
+
+
+def frenet_to_glob(trajectory, planner,projection):
+    frenet_path = planner.opt_path_tot
+    path = []
+    for i in range(len(frenet_path.s)):
+        s = projection + (frenet_path.s[i] - planner.s0[0]) 
+        d = frenet_path.d[i] 
+        target_pos = trajectory.compute_pt(s) + \
+            compute_ortogonal_vect(trajectory, s) * d
+        path.append(target_pos)
+    path = np.array(path)
+    return path
+
+
+def compute_ortogonal_vect(trajectory, s):
+        t_grad = trajectory.compute_first_derivative(s)
+        t_r = np.arctan2(t_grad[1], t_grad[0])
+        return np.array([np.sin(t_r), -np.cos(t_r)])
+    
+def estimatePosition( trajectory: Trajectory, p: np.array):
+        """ Estimate the position of the orthogonal projection of p onto the trajectory
+        """
+        def local_frame() -> (np.ndarray, np.array, float):
+            """ Returns local frame parameters
+            
+            Returns
+            ----------
+            R : np.ndarray
+                Rotation matrix associated with the frame
+            origin : np.array
+                Translation vector associated with the frame
+            theta : float
+                Frame orientation angle
+            """
+            # Frame position
+            origin = trajectory.compute_pt(estimate)
+            # Frame orientation
+            t_grad = trajectory.compute_first_derivative(estimate)
+            t_r = np.arctan2(t_grad[1], t_grad[0])
+            # Precompute sin(t_r) and cos(t_r)
+            ct = np.cos(t_r)
+            st = np.sin(t_r)
+            # Rotation matrix
+            R = np.array([[ct, -st], [st, ct]])
+            return R, origin, t_r
+
+        # LEAST SQUARES BLOCK
+        estimate = 0
+        max_iter = 10
+        for it in range(max_iter):
+            ds, chi = do_ls(trajectory, estimate, p[0:2])
+            estimate += ds
+        # Once estimate is found, generate a local frame
+        r_mat, t_vect, t_r = local_frame()
+        return estimate
+
+def do_ls(trajectory: Trajectory, estimate: float,
+          target: np.array, damping: float=0.01) -> (float, float):
+    # Euclidean difference between current estimate and target
+    cerror = trajectory.compute_pt(estimate) - target
+    J = trajectory.compute_first_derivative(estimate)
+    # Compute H matrix and b vector
+    H = np.matmul(J.T, J) + damping
+    b = np.matmul(J.T, cerror)
+    # Compute new estimate and chi_squares
+    ds = - b / H
+    chi = np.matmul(cerror.T, cerror)
+    return ds, chi
+    

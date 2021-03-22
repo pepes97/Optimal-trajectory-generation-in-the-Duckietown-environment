@@ -12,19 +12,18 @@ logger = logging.getLogger(__name__)
 
 
 class TrajectoryPlannerDefaultParamsDT:
-    dt = 0.5
     kj = 0.01
-    ks = 0.5
-    kd = 0.
+    ks = 0.01
+    kd = 0.5
     kt = 0.01
     kdots = 1
     klong = 1
     klat  = 1
-    delta_t = 0.1
-    desired_speed = 2.5
+    delta_t = 0.3
+    desired_speed = 1.0
     max_road_width = 2
     min_t = 1
-    max_t = 4
+    max_t = 2
     d_road_width = 0.5
     d_d_s = 1
     low_speed_threshold = 2
@@ -39,7 +38,6 @@ class TrajectoryPlannerParamsDT:
     """ Container for TrajectoryPlanner parameters
     """
     def __init__(self, *args, **kwargs):
-        self.dt = tpdp.dt # Sampling time interval
         self.kj = tpdp.kj # Cost term for jerk
         self.ks = tpdp.ks # Cost term for longitudinal displacement
         self.kd = tpdp.kd # Cost term for lateral displacement
@@ -48,7 +46,7 @@ class TrajectoryPlannerParamsDT:
         self.klat  = tpdp.klat # Cost term for lateral trajectory
         self.kt = tpdp.kt 
         
-        self.delta_t = tpdp.delta_t 
+        self.delta_t = tpdp.delta_t # Sampling time interval
         self.desired_speed = tpdp.desired_speed # Desired speed
         self.max_road_width = tpdp.max_road_width    # Maximum road width
         self.d_road_width = tpdp.d_road_width # step road width
@@ -92,7 +90,7 @@ class TrajectoryPlannerV1DT(Planner):
         self.t_initial = t0
         self.d_target = 2.
         self.di_interval = (-self.max_road_width,self.max_road_width,self.d_road_width) # Interval expressed as tuple (D_min, D_max, delta_d)
-        self.t_interval = (self.min_t,self.max_t,self.dt) # Interval expressed as tuple (T_min, T_max, delta_t)
+        self.t_interval = (self.min_t,self.max_t+self.delta_t,self.delta_t) # Interval expressed as tuple (T_min, T_max, delta_t)
         self.si_interval = (round(-self.d_d_s*self.num_sample),round(+self.d_d_s*self.num_sample+self.d_d_s),self.d_d_s)
         self.dsi_interval = (round(self.s0[1]-self.d_d_s*self.num_sample),round(self.s0[1]+self.d_d_s*self.num_sample+self.d_d_s),self.d_d_s) # Interval expressed as tuple (dsd - delta_dsi, dsd + delta_dsi, delta_s)
         self.paths = self.generate_range_polynomials(); # store current paths
@@ -156,7 +154,7 @@ class TrajectoryPlannerV1DT(Planner):
                 for di in np.arange(self.di_interval[0], self.di_interval[1], self.di_interval[2]):
                     f = copy.deepcopy(ft)
                     # Fill Frenet class for d
-                    if ds0 < self.low_speed_threshold and S>0: # low speed
+                    if ds0 < self.low_speed_threshold and S>0 and False: # low speed
                         path = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, S)
                         f.d = [path.compute_pt(abs(s-s0)) for s in f.s]
                         f.dot_d = [path.compute_first_derivative(abs(s-s0)) for s in f.s]
@@ -182,10 +180,10 @@ class TrajectoryPlannerV1DT(Planner):
 
     def optimal_at_time(self, time, opt_path, type_path) -> (float, float, float):
         if time <= opt_path.t[0]:
-            print('Warning: requested time is out of optimal path time interval, increase the query time')
+            print(f'Warning: requested time {time} is out of optimal path time interval, increase the query time')
             index = 0
         elif time >= opt_path.t[-1]:
-            print('Warning: requested time is out of optimal path time interval, reduce the query time')
+            print(f'Warning: requested time {time} is out of optimal path time interval, reduce the query time')
             index = -1
         else:
             index = round((time - opt_path.t[0])/self.delta_t)

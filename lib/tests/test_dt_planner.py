@@ -16,8 +16,39 @@ from ..video import *
 from ..controller import FrenetIOLController
 from ..planner import *
 
-u = np.array([0.5, 0.0])
 
+class PerspectiveWarper:
+    def __init__(self, dest_size=(640, 480),
+                 src=np.float32([
+                     (0.3796, 0.4438),
+                     (0, 0.9396),
+                     (1, 0.9396),
+                     (0.6281, 0.4438)]),
+                 dest=np.float32([(0.3, 0), (0.3, 1), (0.7, 1), (0.7, 0)])):
+        self.dest_size = dest_size
+        dest_size = np.float32(dest_size)
+        self.src = src * dest_size
+        self.dest = dest * dest_size
+        self.M = cv2.getPerspectiveTransform(self.src, self.dest)
+        self.iM = cv2.getPerspectiveTransform(self.dest, self.src)
+
+    def warp(self, frame, draw=False):
+        warped_frame = cv2.warpPerspective(frame, self.M, self.dest_size)
+        if draw:
+            fig, axs = plt.subplots(1, 2)
+            axs[0].imshow(frame)
+            axs[0].plot(self.src[:, 0], self.src[:, 1], 'r')
+            axs[1].imshow(warped_frame)
+            axs[1].plot(self.dest[:, 0], self.dest[:, 1], 'r')
+            plt.show()
+
+        return warped_frame
+
+    def iwarp(self, frame):
+        return cv2.warpPerspective(frame, self.iM, self.dest_size)
+
+u = np.array([1.0, 0.0])
+pos_s = (0.0, 0.0, 0.0)
 def test_duckietown_planner(*args, **kwargs):
     env = DuckietownEnv(seed=123,
                         map_name='loop_empty',
@@ -26,18 +57,11 @@ def test_duckietown_planner(*args, **kwargs):
     # Lines
     perspective_projector = PerspectiveWarper()
     line_filter = CenterLineFilter()
-    line_tracker = SlidingWindowTracker(robust_factor=1)
-    middle_lane_filter = MiddleLineFilter(perspective_projector, line_filter, line_tracker)
     lat_line_filter = LateralLineFilter()
     lat_line_tracker = SlidingWindowDoubleTracker(robust_factor=1)
     lateral_lane_filter = TrajectoryFilter(perspective_projector, line_filter, lat_line_filter, lat_line_tracker)
     # Controller
     controller = FrenetIOLController(.5, 0.0, 30, 0.0, 0.0)
-    # Planner 
-    planner = TrajectoryPlannerV1DT(TrajectoryPlannerParamsDT())
-    s0 = (0.0, 0.0, 0.0)
-    d0 = (0.0, 0.0, 0.0)
-    planner.initialize(t0=0, p0=d0, s0=s0)
     # Plot 
     fig, ax = plt.subplots(1, 2)
     env.reset()
@@ -47,54 +71,36 @@ def test_duckietown_planner(*args, **kwargs):
     im2 = ax[1].imshow(obs)
     curve_line, = ax[0].plot([], [], 'r')
     curve_unwarped_line, = ax[1].plot([], [], 'r')
-    #scat = ax[1].scatter(0.0,0.0, c='y')
+    # Planner 
+    planner = TrajectoryPlannerV1DT(TrajectoryPlannerParamsDT())
+    line_found, cpose, curvature, _ = lateral_lane_filter.process(obs)
+    s0 = (0.0, 0.0, 0.0)
+    d0 = (cpose[0], 0.0, 0.0)
+    planner.initialize(t0=0, p0=d0, s0=s0)
 
     def animate(i):
-        global u
+        global u, pos_s
         obs, reward, done, info = env.step(u)
         #line_found, cpose, curv,a,b,c = lateral_lane_filter.process(obs)
-        line_found, cpose, curv = lateral_lane_filter.process(obs)
+        line_found, cpose, curvature, _ = lateral_lane_filter.process(obs)
         # f = lambda x: int(a*x**2 + b*x + c)
         # df = lambda x: int(2*a*x + b)
         if line_found:
             robot_fpose = np.array([0.0, cpose[0], cpose[1]])
-            pos_s, pos_d = planner.replanner(i)
-            ts, td = pos_s[0], pos_d[0]
-            #target_pos = ts + compute_ortogonal_vect(df, np.array([f(ts), ts])) * td
-            #print(f'target_pos{target_pos}')
+            d0 = (cpose[0], 0.0, 0.0)
+            planner.initialize(t0=i, p0=d0, s0=pos_s)
+            pos_s, pos_d = planner.replanner(time = i+0.3)
+            lateral_lane_filter.planner = planner
             # Compute error
             error = np.array([0, pos_d[0]]) - robot_fpose[0:2]
             derror = np.array([pos_s[1], pos_d[1]])
-            curvature = curv
-            print(f'curvature{curvature}')
+            # print(f'curvature={curvature}')
             u = controller.compute(robot_fpose, error, derror, curvature)
-            u = u / np.linalg.norm(u)
-            u[1] *= -1
-            print(f'fpose={robot_fpose}, u={u}')
-            
-        """
-        warped_frame = perspective_projector.warp(obs)
-        thresholded_frame = line_filter.process(warped_frame)
-        out_image, line_fit = line_tracker.search(thresholded_frame, draw_windows=True)
-        if (line_fit != np.zeros(3)).all():
-            # Line is found
-            # plot line
-            ploty = np.arange(0, warped_frame.shape[0]-1, 1)
-            line_fit = line_fit[0] * ploty**2 + line_fit[1] * ploty + line_fit[2]
-            curve_line.set_xdata(line_fit)
-            curve_line.set_ydata(ploty)
-            # Unwarp points of the line
-            line_unwarped = np.expand_dims(np.vstack((line_fit, ploty)), axis=1)
-            line_unwarped = np.transpose(line_unwarped, (2, 1, 0))
-            line_unwarped = cv2.perspectiveTransform(line_unwarped, perspective_projector.iM)
-            curve_unwarped_line.set_xdata(line_unwarped[:, 0, 0])
-            curve_unwarped_line.set_ydata(line_unwarped[:, 0, 1])
-        else:
-            curve_line.set_xdata([])
-            curve_line.set_ydata([])
-            curve_unwarped_line.set_xdata([])
-            curve_unwarped_line.set_ydata([])
-        """
+            if np.linalg.norm(u) !=0: 
+                u = u / np.linalg.norm(u)
+            # u[1] *= -1
+            # print(f'fpose={robot_fpose}, u={u}')
+    
         im.set_array(lateral_lane_filter.plot_image)
         im2.set_array(obs)
         #scat.set_offsets(target_pos)
