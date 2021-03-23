@@ -105,7 +105,8 @@ def update(dt):
     #print(obs)
     #if iterator % 10 == 0:
     obs_rgb = cv2.cvtColor(obs, cv2.COLOR_BGR2RGB)
-    cv2.imwrite(f'test_images/{image_idx}.jpg', obs_rgb)
+    str_image_idx = str(image_idx).zfill(4)
+    cv2.imwrite(f'test_images/{str_image_idx}.jpg', obs_rgb)
     image_idx += 1
 
     if key_handler[key.RETURN]:

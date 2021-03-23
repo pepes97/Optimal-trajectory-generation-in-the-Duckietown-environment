@@ -7,7 +7,6 @@ import logging
 from enum import Enum
 from .utils import *
 from .binarize import *
-from .obstacle_recognition import *
 from ..transform import *
 
 class ObjectType(Enum):
