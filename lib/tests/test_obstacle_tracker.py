@@ -9,8 +9,8 @@ from ..plotter import *
 from ..video import *
 from .test_semantic_mapper import OBJ_COLOR_DICT
 
-#IMAGE_PATH_LST = [f'./lib/tests/test_images/{str(i).zfill(4)}.jpg' for i in range(15, 600)]
-IMAGE_PATH_LST = [f'./images/dt_samples/{i}.jpg' for i in range(0, 150)]
+IMAGE_PATH_LST = [f'./lib/tests/test_images/{str(i).zfill(4)}.jpg' for i in range(15, 600)]
+#IMAGE_PATH_LST = [f'./images/dt_samples/{i}.jpg' for i in range(0, 150)]
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,9 @@ def test_obstacle_tracker(*args, **kwargs):
                 cv2.drawContours(wframe, object['contour'], -1, OBJ_COLOR_DICT[object['class']], 3)
         # Apply obstacle tracking
         obstacles, all_obstacles = obstacle_tracker.process(object_dict)
+        
         for object in obstacles:
+            print(object['contour'].shape)
             cv2.drawContours(pframe, object['contour'], -1, OBJ_COLOR_DICT[object['class']], 3)
         # Fill matplotlib container
         if im0 is None:

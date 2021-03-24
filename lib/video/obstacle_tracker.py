@@ -10,6 +10,8 @@ from .semantic_mapper import ObjectType
 from .utils import *
 from .binarize import *
 
+logger = logging.getLogger(__name__)
+
 class ObstacleTracker:
     """ ObstacleTracker filter obstacles (namely ducks, cones and robots) detected by the SemanticMapper by associating each bbox throughout multiple frames.
     """
@@ -26,6 +28,8 @@ class ObstacleTracker:
         self.oid = 0
 
     def _extractObstacles(self, semantic_map):
+        """ Extract dangerous objects from the pre-computed semantic map
+        """
         obstacle_lst = []
         obstacle_keys = [ObjectType.DUCK, ObjectType.CONE, ObjectType.ROBOT, ObjectType.WALL]
         for k in obstacle_keys:
@@ -50,6 +54,8 @@ class ObstacleTracker:
         del self.disappeared[oid]
 
     def _computeDistance(self, o1, o2):
+        """ Computes euclidean distance between two obstacles
+        """
         return np.linalg.norm(o1['center'] - o2['center'])
 
     def _gating(self, assoc_mat):
@@ -116,6 +122,7 @@ class ObstacleTracker:
         detected_obstacles = []
         remove_idx_lst = []
         current_obstacles = self._extractObstacles(semantic_map)
+        # No obstacles found in the current frame
         if len(current_obstacles) == 0:
             # Loop over existing tracked obstacles and mark them as disappeared
             for k in self.obstacles.keys():
@@ -126,10 +133,12 @@ class ObstacleTracker:
             for k in remove_idx_lst:
                 self._deregisterObstacle(k)
             return np.array([]), self.obstacles
+        # No previous obstacles, but new ones found
         # If no obstacles are registered, register the current ones
         if len(self.obstacles) == 0:
             for obst in current_obstacles:
                 self._registerObstacle(obst)
+        # General case (Obstacles saved and new proposals are found)
         else:
             # Associate new obstacles with ones previously tracked and update/add
             # Generate association cost matrix
@@ -144,16 +153,13 @@ class ObstacleTracker:
                     o2 = self.obstacles[obst_keys[c]]
                     assoc_mat[r, c] = np.linalg.norm(o1['center'] - o2['center'])
             # Apply gating
-            #print('assoc_matrix')
-            #print(assoc_mat)
             associations, new_indices = self._gating(assoc_mat)
-            #print(associations)
             associations, bf_pruned   = self._bestFriend(associations, assoc_mat)
             associations, lbf_pruned  = self._lonelyBestFriend(associations, assoc_mat)
             doubtful_indices = np.concatenate([bf_pruned, lbf_pruned])
-            #print(assoc_mat)
-            #print(f'new_indices:{new_indices}, bf_pruned:{bf_pruned}, lbf_pruned:{lbf_pruned}')
-            #print(f'associations:{associations}')
+            logger.debug(assoc_mat)
+            logger.debug(f'new_indices:{new_indices}, bf_pruned:{bf_pruned}, lbf_pruned:{lbf_pruned}')
+            logger.debug(f'associations:{associations}')
 
             # First apply decay to all registered objects
             # Then remove the decay for tracked ones
@@ -185,4 +191,42 @@ class ObstacleTracker:
                 detected_obstacles.append(self.obstacles[k])
         
         return detected_obstacles, self.obstacles
+
+    def _computeObstacleFeatures(self, obstacles, projector, semantic_map):
+        """ Computes features for each tracked obstacle.
+        Features include:
+        - Unwarped vector pointing towards the closest obstacle point
+        - Unwarped polar direction and distance
+        - Inner lane detection (boolean)
+        """
+        BASELINE_POINT = np.int16([320, 480]) # Lower center camera pixel
+        
+        def closestContourPoint(contour):
+            # Find closest contour point to given target
+            ...
+
+        def unwarpedPointVector(tpoint):
+            # Generates unwarped vector pointing at tpoint
+            ...
+
+        def unwarpedPolar(tvect):
+            # Generates polar representation of point_vect
+            ...
+
+        def innerLaneDetector(t_point, tvect):
+            # Returns True if t_point is inside the lane, False otherwise
+            ...
+
+        for object in obstacles:
+            tpoint = closestContourPoint(object['contour'])
+            tvect  = unwarpedPointVector(tpoint)
+            polar_tvect = unwarpedPolar(tvect)
+            
+            
+            
+            object['features'] = ...
+            
+            
+        return []
+        
 
