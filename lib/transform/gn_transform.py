@@ -41,6 +41,7 @@ class FrenetGNTransform(FrenetTransform):
             st = np.sin(t_r)
             # Rotation matrix
             R = np.array([[ct, -st], [st, ct]])
+
             return R, origin, t_r
 
         # LEAST SQUARES BLOCK
