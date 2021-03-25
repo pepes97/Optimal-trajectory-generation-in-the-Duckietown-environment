@@ -12,25 +12,24 @@ logger = logging.getLogger(__name__)
 
 
 class TrajectoryPlannerDefaultParamsDT:
-    kj = 0.01
+    kj = 0.001
     ks = 0.01
-    kd = 0.9
+    kd = 1.0
     kt = 0.01
     kdots = 1
     klong = 1
     klat  = 1
-    delta_t = 1.1/30
+    delta_t = 1/30
     desired_speed = 1.0
-    max_road_width = 0.25
-    min_t = 5/30
-    max_t = 15/30
-    d_road_width = 0.1
+    max_road_width = 0.1
+    min_t = 20/30
+    max_t = 1
+    d_road_width = 0.05
     d_d_s = 1
     low_speed_threshold = 2
     s_threshold = 1
     target_distance = 1
-    num_sample = 2
-    
+    num_sample = 2    
 
 tpdp = TrajectoryPlannerDefaultParamsDT
 

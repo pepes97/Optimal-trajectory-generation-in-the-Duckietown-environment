@@ -34,8 +34,11 @@ class FrenetGNTransform(FrenetTransform):
             # Frame position
             origin = self.trajectory.compute_pt(self.estimate)
             # Frame orientation
-            t_grad = self.trajectory.compute_first_derivative(self.estimate)
+            ds = 1/30
+            s1 = self.estimate + ds
+            t_grad = self.trajectory.compute_pt(s1) - self.trajectory.compute_pt(self.estimate)
             t_r = np.arctan2(t_grad[1], t_grad[0])
+            # t_r = np.arctan2(t_grad[1], t_grad[0])
             # Precompute sin(t_r) and cos(t_r)
             ct = np.cos(t_r)
             st = np.sin(t_r)
@@ -94,16 +97,16 @@ class FrenetGNTransform(FrenetTransform):
             raise ValueError
 
 def do_ls(trajectory: DifferentiableFunction, estimate: float,
-          target: np.array, damping: float=0.001) -> (float, float):
+          target: np.array, damping: float=0.01) -> (float, float):
     # Euclidean difference between current estimate and target
-    e = np.linalg.norm(target - trajectory.compute_pt(estimate))
-    J = trajectory.compute_first_derivative(estimate).reshape(1,2)
+    cerror = trajectory.compute_pt(estimate) - target
+    J = trajectory.compute_first_derivative(estimate)
     # Compute H matrix and b vector
-    H = J.T @ J + np.identity(2) * damping
-    b = J.T * e
+    H = np.matmul(J.T, J) + damping
+    b = np.matmul(J.T, cerror)
     # Compute new estimate and chi_squares
-    ds = - np.linalg.inv(H) @ b
-    chi = e.T * e
-    return ds.flatten()[0], chi
+    ds = - b / H
+    chi = np.matmul(cerror.T, cerror)
+    return ds, chi
     
     

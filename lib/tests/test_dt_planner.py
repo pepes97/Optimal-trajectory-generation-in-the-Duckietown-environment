@@ -15,7 +15,7 @@ from numpy import arange
 from ..video import *
 from ..controller import FrenetIOLController
 from ..planner import *
-from ..transform import FrenetGNTransform
+from ..transform import FrenetDKTransform
 from ..platform import Unicycle
 
 class PerspectiveWarper:
@@ -61,9 +61,11 @@ def frenet_to_glob(trajectory, planner, projection):
     return path
 
 def compute_ortogonal_vect(trajectory, s):
-        t_grad = trajectory.compute_first_derivative(s)
-        t_r = np.arctan2(t_grad[1], t_grad[0])
-        return np.array([-np.sin(t_r), np.cos(t_r)])
+    ds = 1/30
+    s1 = s + ds
+    t_grad = trajectory.compute_pt(s1) - trajectory.compute_pt(s)
+    t_r = np.arctan2(t_grad[1], t_grad[0])
+    return np.array([-np.sin(t_r), np.cos(t_r)])
 
 def test_duckietown_planner(*args, **kwargs):
     env = DuckietownEnv(seed=123,
@@ -75,7 +77,7 @@ def test_duckietown_planner(*args, **kwargs):
     line_filter = CenterLineFilter()
     lat_line_filter = LateralLineFilter()
     lat_line_tracker = SlidingWindowDoubleTracker(robust_factor=1)
-    transformer = FrenetGNTransform()
+    transformer = FrenetDKTransform()
     lateral_lane_filter = TrajectoryFilter(perspective_projector, line_filter, lat_line_filter, lat_line_tracker, transformer)
     # Controller
     controller = FrenetIOLController(.5, 0.0, 27, 0.0, 0.0)
@@ -93,7 +95,7 @@ def test_duckietown_planner(*args, **kwargs):
     global u, robot_p, robot_dp, robot_ddp, pos_s, pos_d
     robot = Unicycle()
     robot.set_initial_pose(robot.p)
-    robot_p = robot.p
+    robot_p = np.zeros(3)
     robot_dp = np.zeros(3)
     robot_ddp = np.zeros(3)
     u = np.zeros(2)
@@ -105,30 +107,33 @@ def test_duckietown_planner(*args, **kwargs):
     
     pos_s = s0 = (robot_fpose[0], 0.0, 0.0)
     pos_d = d0 = (robot_fpose[1], 0.0, 0.0)
+
     planner.initialize(t0=0, p0=d0, s0=s0)
+    dt = 1/30
 
     def animate(i):
         global u, robot_p, robot_dp, robot_ddp, pos_s, pos_d
         
         obs, reward, done, info = env.step(u)
         actual_u = np.array(info['Simulator']['action'])
-        robot_p, robot_dp = robot.step(actual_u, 1/30)
+        robot_p, robot_dp = robot.step(actual_u, dt)
 
         line_found, trajectory, observations = lateral_lane_filter.process(obs)
 
         if line_found:
             # Estimate frenet frame
-            # robot_p = np.array([0.0,0.0,0.0])
-            est_pt = transformer.estimatePosition(trajectory, robot_p)
+            robot_p = np.array([0.1,0.0,0.0])
+            est_pt = transformer.estimatePosition(trajectory,  robot_p)
             # Robot pose in frenet
-            
             robot_fpose = transformer.transform(robot_p)
             # Get replanner step
-            dt = 1/30
+    
+            planner.p0=(robot_fpose[1],planner.p0[1],planner.p0[2]) # this is just to avoid blue trajectory to converge immediately
             pos_s, pos_d = planner.replanner(time = i*dt)
-            lateral_lane_filter.proj_planner = trajectory.compute_pt(robot_fpose[0])
-            lateral_lane_filter.path_planner = frenet_to_glob(trajectory, planner, robot_fpose[0])
-            # target pos for plot coordinates
+
+            lateral_lane_filter.proj_planner = trajectory.compute_pt(est_pt)
+            lateral_lane_filter.path_planner = frenet_to_glob(trajectory, planner, est_pt)
+
             #Compute error
             error = np.array([0, pos_d[0]]) - robot_fpose[0:2]
             derror = np.array([pos_s[1], pos_d[1]])
@@ -136,11 +141,9 @@ def test_duckietown_planner(*args, **kwargs):
             curvature = trajectory.compute_curvature(est_pt)
             # Compute control
             u = controller.compute(robot_fpose, error, derror, curvature)
-            if np.linalg.norm(u) !=0: 
+            if np.linalg.norm(u) != 0: 
                 u = u / np.linalg.norm(u)
-            # Step the unicycle
-            # u[1] *= -1
-            
+            # Step the unicycle            
             
             # print(f'fpose={robot_fpose}, u={u}')        
 

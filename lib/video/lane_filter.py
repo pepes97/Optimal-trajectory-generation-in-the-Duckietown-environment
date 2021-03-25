@@ -648,7 +648,7 @@ class TrajectoryFilter():
         thresh_frame_w = self.filter_w.process(warped_frame)
         # Try to fit a quadratic curve to the mid line
         line_fit, self.plot_image, lane_offset, contours_midpt = self.tracker.search(image_y=thresh_frame_y, image_w=thresh_frame_w, draw_windows=True)
-        lane_offset = 150
+        lane_offset = 150*np.sign(lane_offset)
         lane_width = abs(lane_offset)*2
         # self.pixel_ratio = (self.trajectory_width+self.yellow_tape/2+self.white_tape/2)/lane_width #[m/px]
         observations = self.cam2rob(contours_midpt)
@@ -669,34 +669,38 @@ class TrajectoryFilter():
 
             trajectory.compute_first_derivative = lambda x: np.array([1, 2*a*x + b])
             
-            trajectory.compute_second_derivative = lambda x: np.array([x, 2*a])
+            trajectory.compute_second_derivative = lambda x: np.array([0, 2*a])
 
             def compute_curvature(trajectory, t):
-                acc_vect = trajectory.compute_second_derivative(t)
-                vel_vect = trajectory.compute_first_derivative(t)
-                numer = acc_vect[1] * vel_vect[0] - acc_vect[0] * vel_vect[1]
-                denom = vel_vect[0]**2 + vel_vect[1]**2
-                return np.abs(numer) / denom**(3/2)
+                dt = 1/30
+                x0, x1, x2 = t - dt, t, t + dt
+                y0, y1, y2 = trajectory.compute_pt(x0)[1], trajectory.compute_pt(x1)[1], \
+                    trajectory.compute_pt(x2)[1]
+                t1 = np.arctan2(np.sin(y1-y0), np.cos(x1-x0))
+                t2 = np.arctan2(np.sin(y2-y1), np.cos(x2-x1))
+                k = np.abs(t2-t1)/np.linalg.norm(np.array([x1-x0,y1-y0]))
+                return k
             
             trajectory.compute_curvature = lambda x: compute_curvature(trajectory, x)
 
             if np.array(self.proj_planner!=None).all():
                 proj = self.rob2cam(self.proj_planner[None])[0]
                 cv2.circle(self.plot_image, tuple(proj), 10, (255, 0, 0), -1)
+                cv2.circle(self.plot_image, (320, 480), 10, (255, 0, 0), -1)
                 cv2.arrowedLine(self.plot_image, (320, 480), (proj[0], proj[1]), (255, 0, 0), 5) # distance to projection
             
-            # if np.array(self.path_planner!=None).all():
-            #     if (self.path_planner<2).all():
-            #         path = self.rob2cam(self.path_planner, int_type=False)
-            #         a, b, c = np.polyfit(path[:,1], path[:,0], 2)
-            #         xx = lambda y: int(a*y**2 + b*y + c)
-            #         yy = np.arange(0,480,20)
-            #         for y in yy:
-            #             point_on_target = np.array([xx(y),y],np.int32)
-            #             cv2.circle(self.plot_image, tuple(point_on_target), 5, (255, 0, 0), -1)
+            if np.array(self.path_planner!=None).all():
+                if (self.path_planner<3).all():
+                    path = self.rob2cam(self.path_planner, int_type=False)
+                    aa, bb, cc = np.polyfit(path[:,1], path[:,0], 2)
+                    xxx = lambda y: int(aa*y**2 + bb*y + cc)
+                    yyy = np.arange(0,480,20)
+                    for y in yyy:
+                        pts = np.array([xxx(y),y],np.int32)
+                        cv2.circle(self.plot_image, tuple(pts), 5, (0, 0, 255), -1)
 
         else:
             self.line_found = False
         
-        # self.plot_image = self.projector.iwarp(self.plot_image) # go back to street view
+        self.plot_image = self.projector.iwarp(self.plot_image) # go back to street view
         return self.line_found, trajectory, observations
