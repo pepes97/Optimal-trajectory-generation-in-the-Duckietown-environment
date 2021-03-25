@@ -567,7 +567,7 @@ class TrajectoryFilter():
     If the line is found and verified, then it returns the best quadratic fit (in lane space), the
     camera offset (d) and inclination (theta~)
     """
-    def __init__(self, projector, filter_y, filter_w, tracker, trasformer):
+    def __init__(self, projector, filter_y, filter_w, tracker):
         self.projector = projector
         self.filter_y = filter_y
         self.filter_w = filter_w
@@ -580,7 +580,6 @@ class TrajectoryFilter():
         self.pixel_ratio = 0.00082 #[px/m]
         self.proj_planner = None
         self.path_planner = None
-        self.transformer = trasformer
         self.K2R = np.array([[0, -self.pixel_ratio, 480*self.pixel_ratio],
                             [-self.pixel_ratio, 0, 320*self.pixel_ratio],
                             [0, 0, 1]],dtype=np.float64)

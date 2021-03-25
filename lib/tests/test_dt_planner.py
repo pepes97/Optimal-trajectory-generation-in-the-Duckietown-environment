@@ -78,7 +78,7 @@ def test_duckietown_planner(*args, **kwargs):
     lat_line_filter = LateralLineFilter()
     lat_line_tracker = SlidingWindowDoubleTracker(robust_factor=1)
     transformer = FrenetDKTransform()
-    lateral_lane_filter = TrajectoryFilter(perspective_projector, line_filter, lat_line_filter, lat_line_tracker, transformer)
+    lateral_lane_filter = TrajectoryFilter(perspective_projector, line_filter, lat_line_filter, lat_line_tracker)
     # Controller
     controller = FrenetIOLController(.5, 0.0, 27, 0.0, 0.0)
     # Plot 
