@@ -667,7 +667,7 @@ class TrajectoryFilter():
 
             trajectory.compute_pt = lambda x: np.array([x, a*x**2 + b*x + c])
 
-            trajectory.compute_first_derivative = lambda x: np.array([x, 2*a*x + b])
+            trajectory.compute_first_derivative = lambda x: np.array([1, 2*a*x + b])
             
             trajectory.compute_second_derivative = lambda x: np.array([x, 2*a])
 
