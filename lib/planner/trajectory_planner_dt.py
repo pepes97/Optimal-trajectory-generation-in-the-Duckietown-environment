@@ -24,7 +24,7 @@ class TrajectoryPlannerDefaultParamsDT:
     max_road_width = 0.1
     min_t = 20/30
     max_t = 1
-    d_road_width = 0.05
+    d_road_width = 0.1
     d_d_s = 1
     low_speed_threshold = 2
     s_threshold = 1
@@ -226,6 +226,9 @@ class TrajectoryPlannerV1DT(Planner):
                 self.dd = dd
             if dsd != None: # velocity keeping
                 self.desired_speed = dsd
-        self.replan_ctot(time=time)
-
+        if time <= self.opt_path_tot.t[0] or time >= self.opt_path_tot.t[-2]:
+            self.replan_ctot(time=time)
+        else:
+            self.p0 = self.optimal_at_time(time, self.opt_path_tot, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
+            self.s0 = self.optimal_at_time(time, self.opt_path_tot, "s")
         return self.s0, self.p0 #, self.opt_path_tot

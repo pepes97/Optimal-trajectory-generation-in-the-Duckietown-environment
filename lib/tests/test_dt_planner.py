@@ -109,7 +109,7 @@ def test_duckietown_planner(*args, **kwargs):
     pos_d = d0 = (robot_fpose[1], 0.0, 0.0)
 
     planner.initialize(t0=0, p0=d0, s0=s0)
-    dt = 1/30
+    dt = 1/60
 
     def animate(i):
         global u, robot_p, robot_dp, robot_ddp, pos_s, pos_d
@@ -117,7 +117,6 @@ def test_duckietown_planner(*args, **kwargs):
         obs, reward, done, info = env.step(u)
         actual_u = np.array(info['Simulator']['action'])
         robot_p, robot_dp = robot.step(actual_u, dt)
-
         line_found, trajectory, observations = lateral_lane_filter.process(obs)
 
         if line_found:
@@ -127,13 +126,9 @@ def test_duckietown_planner(*args, **kwargs):
             # Robot pose in frenet
             robot_fpose = transformer.transform(robot_p)
             # Get replanner step
-    
-            planner.p0=(robot_fpose[1],planner.p0[1],planner.p0[2]) # this is just to avoid blue trajectory to converge immediately
             pos_s, pos_d = planner.replanner(time = i*dt)
-
             lateral_lane_filter.proj_planner = trajectory.compute_pt(est_pt)
             lateral_lane_filter.path_planner = frenet_to_glob(trajectory, planner, est_pt)
-
             #Compute error
             error = np.array([0, pos_d[0]]) - robot_fpose[0:2]
             derror = np.array([pos_s[1], pos_d[1]])
@@ -142,17 +137,12 @@ def test_duckietown_planner(*args, **kwargs):
             # Compute control
             u = controller.compute(robot_fpose, error, derror, curvature)
             if np.linalg.norm(u) != 0: 
-                u = u / np.linalg.norm(u)
-            # Step the unicycle            
-            
+                u = u / np.linalg.norm(u)            
             # print(f'fpose={robot_fpose}, u={u}')        
-
 
         im.set_array(lateral_lane_filter.plot_image)
         im2.set_array(obs)
-        #scat.set_offsets(target_pos)
         env.render()
         return [im, im2, curve_line, curve_unwarped_line]
-        # return [im, im2, curve_line, curve_unwarped_line, scat]
     ani = animation.FuncAnimation(fig, animate, frames=500, interval=50, blit=True)
     plt.show()

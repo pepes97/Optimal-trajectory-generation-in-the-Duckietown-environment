@@ -165,6 +165,8 @@ def linspace():
     linspace = np.concatenate([xx,yy],axis=-1)
     return linspace
 
+import warnings
+
 class SlidingWindowDoubleTracker:
     def __init__(self, robust_factor: int=1):
         self.coeff_a = []
@@ -173,10 +175,10 @@ class SlidingWindowDoubleTracker:
         assert robust_factor >= 1
         self.robust_factor = robust_factor
         # Minimum mask pixels to initiate line search
-        self.minimum_pixels = 1000
+        self.minimum_pixels = 4000
         self.contour_min_area = 200
         self.last_seen_yellow_pos = [np.array([320,480])]
-        self.max_line_offset = 150
+        self.max_line_offset = 250
         self.line_offset_mean = []
 
     def search(self, image_y, image_w, no_windows: int=9, margin: int=50, min_pix: int=1, draw_windows=False):
@@ -186,51 +188,59 @@ class SlidingWindowDoubleTracker:
         contours_midpt = np.array([]).reshape(0,2)
         line_offset = self.max_line_offset
 
-        if np.count_nonzero(image_y) < self.minimum_pixels and np.count_nonzero(image_w) < self.minimum_pixels:
-            lane_fit = np.zeros(3)
+        if (np.count_nonzero(image_y) < self.minimum_pixels and np.count_nonzero(image_w) < self.minimum_pixels):
+            pass
         else:
             lane_fit_w, offset_w = self.white_line_fit(image_w, test_image_w, draw_windows)
-            lane_fit_y, offset_y, contours_midpt = self.yellow_line_fit(image_y, test_image_y, draw_windows)
+            # catch polyfit warning 
+            warnings.simplefilter('ignore', np.VisibleDeprecationWarning) 
+            with warnings.catch_warnings(record=True) as w:
+                lane_fit_y, offset_y, contours_midpt = self.yellow_line_fit(image_y, test_image_y, draw_windows)
+                w = list(filter(lambda i: issubclass(i.category, np.RankWarning), w))
+                if len(w): 
+                    lane_fit_y = lane_fit_w
+                    offset_y = offset_w
+            # we want to estimate the distance between the two parabola
+            # by looking at it's coefficients
+            # line_offset = self.get_line_offset(lane_fit_y, lane_fit_w)
             if np.count_nonzero(image_y) < self.minimum_pixels:
                 lane_fit = lane_fit_w
                 offset = offset_w
             else:
                 lane_fit = lane_fit_y
                 offset = offset_y
-            # we want to estimate the distance between the two parabola
-            # by looking at it's coefficients
-            if np.isfinite(lane_fit_y).all():
-                a,b,c = lane_fit_y[0],lane_fit_y[1],lane_fit_y[2]
-                f = lambda x: int(a*x**2 + b*x + c)
-                p = 240 # query point
-                dirr = np.array([f(p-1),p-1],dtype=np.float32) - np.array([f(p+1),p+1],dtype=np.float32)
-                normal = dirr[::-1] * np.r_[1.,-1.]
-                normal = normal / np.linalg.norm(normal)
-                point = np.array([f(p),p],dtype=np.float32)
-                points_to_line = lambda p1,p2: ((p1[1]-p2[1])/(p1[0]-p2[0]),(p1[0]*p2[1]-p2[0]*p1[1])/(p1[0]-p2[0]))
-                m, q = points_to_line(point, point+normal)
-                a,b,c = lane_fit_w[0],lane_fit_w[1],lane_fit_w[2]
-                point_on_white = np.roots([c-q,b-m,a])
-                line_offset = np.linalg.norm(point-point_on_white).astype(int)//2
-
-            self.line_offset_mean.append(line_offset)
-        
+            # self.line_offset_mean.append(line_offset)
             self.coeff_a.append(lane_fit[0])
             self.coeff_b.append(lane_fit[1])
             self.coeff_c.append(lane_fit[2])
-        
-        def reject_outliers(data, m=10):
-                return data[abs(data - np.mean(data)) < m * np.std(data)]
 
-        line_offset = np.mean(self.line_offset_mean[-self.robust_factor:])
+        # line_offset = np.mean(self.line_offset_mean[-self.robust_factor:])
         lane_fit[0] = np.mean(self.coeff_a[-self.robust_factor:])
         lane_fit[1] = np.mean(self.coeff_b[-self.robust_factor:])
         lane_fit[2] = np.mean(self.coeff_c[-self.robust_factor:])
-        
+                
         test_image = test_image_y+test_image_w     
-        # last_seen_yellow_pos = np.mean(self.last_seen_yellow_pos[-self.robust_factor:],axis=0) 
         
-        return lane_fit, test_image, offset * line_offset, contours_midpt
+        return lane_fit, test_image, offset, contours_midpt
+
+    # def get_line_offset(self, lane_fit_y, lane_fit_w):
+    #     x = np.arange(0,480,20)
+    #     offset_mean=[]
+    #     for p in x:
+    #         a,b,c = lane_fit_y[0],lane_fit_y[1],lane_fit_y[2]
+    #         f = lambda x: int(a*x**2 + b*x + c)
+    #         # p = 240 # query point
+    #         dirr = np.array([f(p-1),p-1],dtype=np.float32) - np.array([f(p+1),p+1],dtype=np.float32)
+    #         normal = dirr[::-1] * np.r_[1.,-1.]
+    #         normal = normal / np.linalg.norm(normal)
+    #         point = np.array([f(p),p],dtype=np.float32)
+    #         points_to_line = lambda p1,p2: ((p1[1]-p2[1])/(p1[0]-p2[0]),(p1[0]*p2[1]-p2[0]*p1[1])/(p1[0]-p2[0]))
+    #         m, q = points_to_line(point, point+normal)
+    #         a,b,c = lane_fit_w[0],lane_fit_w[1],lane_fit_w[2]
+    #         point_on_white = np.roots([c-q,b-m,a])
+    #         line_offset = np.linalg.norm(point-point_on_white).astype(int)//2
+    #         offset_mean.append(line_offset)
+    #     return np.mean(line_offset).astype(int)
 
     def yellow_line_fit(self, image_y, test_image_y, draw_windows):
         # Find Contours yellow
@@ -293,11 +303,11 @@ class SlidingWindowDoubleTracker:
             if len(right)>0:
                 points = right
                 contour = contour_right
-                offset = - 1
+                offset = -1
             else:
                 points = left
                 contour = contour_left
-                offset = 1
+                offset = 3#1
             if draw_windows:
                 cv2.drawContours(test_image_w, contour, -1, (0, 255, 0), 3)
             for i in range(len(contour)):
@@ -354,186 +364,6 @@ class MiddleLineFilter():
             self.line_found = False
         return self.line_found, np.float32([d, t])
 
-# class TrajectoryFilter():
-#     """ Finds and tracks the middle dashed yellow line.
-#     If the line is found and verified, then it returns the best quadratic fit (in lane space), the
-#     camera offset (d) and inclination (theta~)
-#     """
-#     def __init__(self, projector, filter_y, filter_w, tracker, trasformer):
-#         self.projector = projector
-#         self.filter_y = filter_y
-#         self.filter_w = filter_w
-#         self.tracker = tracker
-#         self.line_found = False
-#         self.plot_image = None
-#         self.trajectory_width = 0.21 #[m]
-#         self.white_tape = 0.048 #[m]
-#         self.yellow_tape = 0.024 #[m]
-#         self.pixel_ratio = 0.00082 #[px/m]
-#         self.planner = None
-#         self.transformer = trasformer
-#         self.K2R = np.array([[0, -self.pixel_ratio, 480*self.pixel_ratio],
-#                             [-self.pixel_ratio, 0, 320*self.pixel_ratio],
-#                             [0, 0, 1]],dtype=np.float64)
-#         self.R2K = np.linalg.inv(self.K2R)
-#         self.K2W = np.array([[self.pixel_ratio, 0, 0],
-#                             [0, -self.pixel_ratio, 480*self.pixel_ratio],
-#                             [0, 0, 1]],dtype=np.float64)
-#         self.W2K = np.linalg.inv(self.K2W)
-            
-#     def rob2cam(self, robot_points: np.ndarray) -> np.ndarray: 
-#         # homogeneous vector
-#         robot_points = np.c_[robot_points, np.ones(robot_points.shape[0])] 
-#         # homogeneous matrix
-#         camera_points = (self.R2K @ robot_points.T).T
-#         # euclidean vector
-#         camera_points = camera_points[:,:-1]/camera_points[:,-1:]
-#         # invert order to have min y in first position
-#         camera_points = camera_points[::-1]
-#         return camera_points.round().astype(int)
-
-#     def cam2rob(self, camera_points: np.ndarray) -> np.ndarray: 
-#         # homogeneous vector
-#         camera_points = np.c_[camera_points, np.ones(camera_points.shape[0])] 
-#         # homogeneous matrix
-#         robot_points = (self.K2R @ camera_points.T).T
-#         # euclidean vector
-#         robot_points = robot_points[:,:-1]/robot_points[:,-1:]
-#         # invert order to have min y in first position
-#         robot_points = robot_points[::-1]
-#         return robot_points
-    
-#     # def cam2world(self, camera_points: np.ndarray) -> np.ndarray: 
-#     #     # homogeneous vector
-#     #     camera_points = np.c_[camera_points, np.ones(camera_points.shape[0])] 
-#     #     # homogeneous matrix
-#     #     world_points = (self.K2W @ camera_points.T).T
-#     #     # euclidean vector
-#     #     world_points = world_points[:,:-1]
-#     #     # invert order to have min y in first position
-#     #     world_points = world_points[::-1]
-#     #     return world_points
-    
-#     # def world2cam(self, world_points: np.ndarray) -> np.ndarray: 
-#     #     # homogeneous vector
-#     #     world_points = np.c_[world_points, np.ones(world_points.shape[0])] 
-#     #     # homogeneous matrix
-#     #     camera_points = (self.W2K @ world_points.T).T
-#     #     # euclidean vector
-#     #     camera_points = camera_points[:,:-1]
-#     #     # invert order to have min y in first position
-#     #     camera_points = camera_points[::-1]
-#     #     return camera_points.round().astype(int)
-
-#     def process_target(self, line_fit, lane_offset):
-#         a, b, c = line_fit
-#         target = []
-#         xx = lambda y: int(a*y**2 + b*y + c)
-#         yy = np.arange(0,480,20)
-#         for i in range(yy.shape[0]-1):
-#             point_on_line = np.array([xx(yy[i]),yy[i]],np.int32)
-#             cv2.circle(self.plot_image, tuple(point_on_line), 5, (255, 0, 0), -1)
-#             diff = point_on_line - np.array([xx(yy[i+1]),yy[i+1]],np.int32)
-#             th = np.arctan2(diff[1],diff[0])
-#             dirr = np.array([-np.sin(th),np.cos(th)])
-#             point_on_target = np.array(point_on_line + dirr * (lane_offset - int(self.yellow_tape/2*1/self.pixel_ratio)),np.int32)
-#             target.append(point_on_target)
-#         target = np.stack(target)
-#         # sample again to get the full trajectory
-#         a, b, c = np.polyfit(target[:,1], target[:,0], 2)
-#         xx = lambda y: int(a*y**2 + b*y + c)
-#         yy = np.arange(0,480,20)
-#         target = []
-#         for y in yy:
-#             point_on_target = np.array([xx(y),y],np.int32)
-#             target.append(point_on_target)
-#             cv2.circle(self.plot_image, tuple(point_on_target), 5, (0, 255, 0), -1)
-#         return np.array(target)
- 
-#     def process(self, frame) -> (bool, np.array):
-#         d = 0.0
-#         t = 0.0
-#         curv = 0.0
-#         # Generate warped frame
-#         warped_frame = self.projector.warp(frame)
-#         # Threshold warped frame to find yellow mid line
-#         thresh_frame_y = self.filter_y.process(warped_frame)
-#         thresh_frame_w = self.filter_w.process(warped_frame)
-#         # Try to fit a quadratic curve to the mid line
-#         line_fit, self.plot_image, lane_offset, contours_midpt = self.tracker.search(image_y=thresh_frame_y, image_w=thresh_frame_w, draw_windows=True)
-#         lane_offset = 150
-#         lane_width = abs(lane_offset)*2
-#         # self.pixel_ratio = (self.trajectory_width+self.yellow_tape/2+self.white_tape/2)/lane_width #[m/px]
-#         observations = self.cam2rob(contours_midpt)
-#         if (line_fit != np.zeros(3)).all() and np.isfinite(line_fit).all():
-#             # Line is found
-#             self.line_found = True
-#             # Compute d and t
-#             target = self.process_target(line_fit, lane_offset)
-#             target_planner = []
-#             xy0 = xy1 = xy2 = np.array([0.0,0.0])
-#             s0 = s1 = s2 = 0
-#             ds = 0.01
-#             if self.planner is not None:
-#                 rob_target = self.cam2rob(np.stack(target))
-#                 a, b, c = np.polyfit(rob_target[:,0], rob_target[:,1], 2)
-#                 trajectory = Trajectory()
-#                 trajectory.compute_pt = lambda x: np.array([x, a*x**2 + b*x + c])
-#                 trajectory.compute_first_derivative = lambda x: np.array([x, 2*a*x + b])
-#                 robot_reference_p = np.array([0.0,0.0])
-#                 s0 = self.transformer.estimatePosition(trajectory, robot_reference_p)
-#                 xy0 = trajectory.compute_pt(s0)
-#                 s1 = s0+ds
-#                 xy1 = trajectory.compute_pt(s1)
-#                 s2 = s1+ds
-#                 xy2 = trajectory.compute_pt(s2)
-#                 points_planner = frenet_to_glob(trajectory, self.planner, s0)
-#                 points_planner = np.array(points_planner)
-#                 a, b, c = np.polyfit(points_planner[:,0], points_planner[:,1], 2)
-#                 yy = lambda x: a*x**2 + b*x + c
-#                 xx = np.arange(0,480,20) * self.pixel_ratio
-#                 for x in xx:
-#                     point_planner = np.array([x,yy(x)],dtype=np.float32)
-#                     target_planner.append(point_planner)
-#                 target_planner = self.rob2cam(np.array(target_planner))
-#                 for points in target_planner:
-#                     cv2.circle(self.plot_image, tuple(points), 5, (0, 0, 255), -1)
-#                 cv2.circle(self.plot_image, tuple(target_planner[-1]), 10, (0, 0, 255), -1) # first planner point
-#             else:
-#                 target_planner = target
-#             # move x axis to the center and y axis at the bottom
-#             # from camera frame to world frame
-#             # transform 
-#             # distance from origin (0,0) in robot frame
-#             d = np.sign(xy0[1])*np.linalg.norm(xy0)
-#             t =  np.arctan2((xy1-xy0)[1], (xy1-xy0)[0])
-#             t1 =  np.arctan2((xy2-xy1)[1], (xy2-xy1)[0])
-#             curv = (t1-t) / (np.linalg.norm(xy2-xy1))
- 
-#             xy0p = self.rob2cam(np.array([xy0]))[0] # projection point
-#             xy1p = self.rob2cam(np.array([xy1]))[0] # first planner trajectory point
-#             xy2p = self.rob2cam(np.array([xy2]))[0]
-#             cv2.circle(self.plot_image, tuple(xy0p), 10, (255, 0, 0), -1)
-#             cv2.circle(self.plot_image, tuple(xy1p), 10, (0, 255, 0), -1)
-#             cv2.circle(self.plot_image, tuple(xy2p), 10, (0, 0, 255), -1)
-            
-#             target = self.cam2rob(np.stack(target_planner))
-#             index = 0
-#             # t = target[index+1] - target[index]
-#             # t =  np.arctan2(t[1], t[0]) #- np.pi/2
-#             # # compute curvature
-#             # tt = target[index+2] - target[index+1]
-#             # t1 = np.arctan2(tt[1], tt[0]) # - np.pi/2
-            
-#             points = self.rob2cam(target)[::-1]
-#             cv2.arrowedLine(self.plot_image, (320, 480), (320+(points[index+2,0]-points[index,0]), 480+(points[index+2,1]-points[index,1])), (0, 255, 0), 5)
-#             cv2.arrowedLine(self.plot_image, (320, 480), (xy0p[0], xy0p[1]), (255, 0, 0), 5) # distance to projection
-#         else:
-#             self.line_found = False
-        
-#         # self.plot_image = self.projector.iwarp(self.plot_image) # go back to street view
-#         return self.line_found, np.float32([d, t]), curv, observations
-
 class RedFilter:
     def __init__(self, *args, **kwargs):
         pass
@@ -577,7 +407,9 @@ class TrajectoryFilter():
         self.trajectory_width = 0.21 #[m]
         self.white_tape = 0.048 #[m]
         self.yellow_tape = 0.024 #[m]
-        self.pixel_ratio = 0.00082 #[px/m]
+        self.line_offset = 150 #[px]
+        self.pixel_ratio = (self.trajectory_width+ \
+            self.yellow_tape/2+self.white_tape/2)/(self.line_offset*2) #[m/px] = 0.00082
         self.proj_planner = None
         self.path_planner = None
         self.K2R = np.array([[0, -self.pixel_ratio, 480*self.pixel_ratio],
@@ -639,6 +471,41 @@ class TrajectoryFilter():
             cv2.circle(self.plot_image, tuple(point_on_target), 5, (0, 255, 0), -1)
         return np.array(target)
  
+    def build_trajectory(self, target):
+        trajectory = Trajectory()
+        target = self.cam2rob(np.array(target))
+        a, b, c = np.polyfit(target[:,0], target[:,1], 2)
+        trajectory.compute_pt = lambda x: np.array([x, a*x**2 + b*x + c])
+        trajectory.compute_first_derivative = lambda x: np.array([1, 2*a*x + b])
+        trajectory.compute_second_derivative = lambda x: np.array([0, 2*a])
+        def compute_curvature(trajectory, t):
+            dt = 1/30
+            x0, x1, x2 = t - dt, t, t + dt
+            y0, y1, y2 = trajectory.compute_pt(x0)[1], trajectory.compute_pt(x1)[1], \
+                trajectory.compute_pt(x2)[1]
+            t1 = np.arctan2(np.sin(y1-y0), np.cos(x1-x0))
+            t2 = np.arctan2(np.sin(y2-y1), np.cos(x2-x1))
+            k = np.abs(t2-t1)/np.linalg.norm(np.array([x1-x0,y1-y0]))
+            return k
+        trajectory.compute_curvature = lambda x: compute_curvature(trajectory, x)
+        return trajectory
+
+    def draw_path(self):
+        if np.array(self.proj_planner!=None).all():
+            proj = self.rob2cam(self.proj_planner[None])[0]
+            # cv2.circle(self.plot_image, tuple(proj), 10, (255, 0, 0), -1)
+            cv2.circle(self.plot_image, (320, 480), 10, (255, 0, 0), -1)
+            cv2.arrowedLine(self.plot_image, (320, 480), (proj[0], proj[1]), (255, 0, 0), 5) # distance to projection
+        if np.array(self.path_planner!=None).all():
+            # if (self.path_planner<3).all():
+            path = self.rob2cam(self.path_planner, int_type=False)
+            aa, bb, cc = np.polyfit(path[:,1], path[:,0], 2)
+            xxx = lambda y: int(aa*y**2 + bb*y + cc)
+            yyy = np.arange(0,480,20)
+            for y in yyy:
+                pts = np.array([xxx(y),y],np.int32)
+                cv2.circle(self.plot_image, tuple(pts), 5, (0, 0, 255), -1)
+
     def process(self, frame) -> (bool, np.array):
         # Generate warped frame
         warped_frame = self.projector.warp(frame)
@@ -646,60 +513,13 @@ class TrajectoryFilter():
         thresh_frame_y = self.filter_y.process(warped_frame)
         thresh_frame_w = self.filter_w.process(warped_frame)
         # Try to fit a quadratic curve to the mid line
-        line_fit, self.plot_image, lane_offset, contours_midpt = self.tracker.search(image_y=thresh_frame_y, image_w=thresh_frame_w, draw_windows=True)
-        lane_offset = 150*np.sign(lane_offset)
-        lane_width = abs(lane_offset)*2
-        # self.pixel_ratio = (self.trajectory_width+self.yellow_tape/2+self.white_tape/2)/lane_width #[m/px]
+        line_fit, self.plot_image, offset, contours_midpt = self.tracker.search(image_y=thresh_frame_y, image_w=thresh_frame_w, draw_windows=True)
+        lane_offset = self.line_offset*offset
         observations = self.cam2rob(contours_midpt)
-
-        trajectory = Trajectory()
-
-        if (line_fit != np.zeros(3)).all() and np.isfinite(line_fit).all():
-            # Line is found
-            self.line_found = True
-            # Compute d and t
-            target = self.process_target(line_fit, lane_offset)
-            
-            target = self.cam2rob(np.array(target))
-            
-            a, b, c = np.polyfit(target[:,0], target[:,1], 2)
-
-            trajectory.compute_pt = lambda x: np.array([x, a*x**2 + b*x + c])
-
-            trajectory.compute_first_derivative = lambda x: np.array([1, 2*a*x + b])
-            
-            trajectory.compute_second_derivative = lambda x: np.array([0, 2*a])
-
-            def compute_curvature(trajectory, t):
-                dt = 1/30
-                x0, x1, x2 = t - dt, t, t + dt
-                y0, y1, y2 = trajectory.compute_pt(x0)[1], trajectory.compute_pt(x1)[1], \
-                    trajectory.compute_pt(x2)[1]
-                t1 = np.arctan2(np.sin(y1-y0), np.cos(x1-x0))
-                t2 = np.arctan2(np.sin(y2-y1), np.cos(x2-x1))
-                k = np.abs(t2-t1)/np.linalg.norm(np.array([x1-x0,y1-y0]))
-                return k
-            
-            trajectory.compute_curvature = lambda x: compute_curvature(trajectory, x)
-
-            if np.array(self.proj_planner!=None).all():
-                proj = self.rob2cam(self.proj_planner[None])[0]
-                cv2.circle(self.plot_image, tuple(proj), 10, (255, 0, 0), -1)
-                cv2.circle(self.plot_image, (320, 480), 10, (255, 0, 0), -1)
-                cv2.arrowedLine(self.plot_image, (320, 480), (proj[0], proj[1]), (255, 0, 0), 5) # distance to projection
-            
-            if np.array(self.path_planner!=None).all():
-                if (self.path_planner<3).all():
-                    path = self.rob2cam(self.path_planner, int_type=False)
-                    aa, bb, cc = np.polyfit(path[:,1], path[:,0], 2)
-                    xxx = lambda y: int(aa*y**2 + bb*y + cc)
-                    yyy = np.arange(0,480,20)
-                    for y in yyy:
-                        pts = np.array([xxx(y),y],np.int32)
-                        cv2.circle(self.plot_image, tuple(pts), 5, (0, 0, 255), -1)
-
-        else:
-            self.line_found = False
-        
-        self.plot_image = self.projector.iwarp(self.plot_image) # go back to street view
+        self.line_found = True
+        target = self.process_target(line_fit, lane_offset)            
+        trajectory = self.build_trajectory(target)
+        self.draw_path()
+        # go back to street view
+        self.plot_image = self.projector.iwarp(self.plot_image) 
         return self.line_found, trajectory, observations
