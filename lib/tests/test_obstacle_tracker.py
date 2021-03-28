@@ -54,8 +54,13 @@ def test_obstacle_tracker(*args, **kwargs):
         obstacles, all_obstacles = obstacle_tracker.process(object_dict)
         
         for object in obstacles:
-            print(object['contour'].shape)
             cv2.drawContours(pframe, object['contour'], -1, OBJ_COLOR_DICT[object['class']], 3)
+            x, y, w, h = object['bbox']
+            # Draw distance line
+            cv2.rectangle(pframe, (x, y), (x+w, y+h), (255, 255, 0), 2)
+            cv2.arrowedLine(pframe, (320, 480), (int(x+w/2), int(y+h)), (255, 0, 0), 3)
+            # Draw Radius line
+            
         # Fill matplotlib container
         if im0 is None:
             im0 = axs[0].imshow(frame)

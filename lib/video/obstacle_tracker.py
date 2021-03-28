@@ -185,48 +185,38 @@ class ObstacleTracker:
                     remove_idx_lst.append(k)
             for k in remove_idx_lst:
                 self._deregisterObstacle(k)
+
         
         for k in self.obstacles.keys():
             if self.appeared[k] > self.min_frames:
                 detected_obstacles.append(self.obstacles[k])
-        
+
+        detected_obstacles = self._computeObstacleFeatures(detected_obstacles)        
         return detected_obstacles, self.obstacles
 
-    def _computeObstacleFeatures(self, obstacles, projector, semantic_map):
+    def _computeObstacleFeatures(self, obstacles):
         """ Computes features for each tracked obstacle.
         Features include:
-        - Unwarped vector pointing towards the closest obstacle point
-        - Unwarped polar direction and distance
-        - Inner lane detection (boolean)
+        - Distance vector from bottom-center point to obstacle
+        - Estimated radius of the obstacle
+        - Inside-lane flag (TODO)
         """
         BASELINE_POINT = np.int16([320, 480]) # Lower center camera pixel
+
+        def computeDistanceRad(x, y, w, h):
+            end_pt = np.array([x + w/2, y+h])
+            radius = w/2
+            distance_vect = end_pt - BASELINE_POINT
+            return distance_vect, radius
         
-        def closestContourPoint(contour):
-            # Find closest contour point to given target
-            ...
-
-        def unwarpedPointVector(tpoint):
-            # Generates unwarped vector pointing at tpoint
-            ...
-
-        def unwarpedPolar(tvect):
-            # Generates polar representation of point_vect
-            ...
-
-        def innerLaneDetector(t_point, tvect):
-            # Returns True if t_point is inside the lane, False otherwise
-            ...
-
         for object in obstacles:
-            tpoint = closestContourPoint(object['contour'])
-            tvect  = unwarpedPointVector(tpoint)
-            polar_tvect = unwarpedPolar(tvect)
-            
-            
-            
-            object['features'] = ...
-            
-            
-        return []
-        
+            x, y, w, h = cv2.boundingRect(object['contour']) # Bounding box
+            distance_vect, radius = computeDistanceRad(x, y, w, h)
+            object['bbox'] = (x, y, w, h)
+            object['distance'] = distance_vect
+            object['radius'] = radius
+            # TODO
+            object['in_lane'] = True
+
+        return obstacles
 
