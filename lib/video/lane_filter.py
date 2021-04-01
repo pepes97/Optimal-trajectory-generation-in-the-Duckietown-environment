@@ -202,45 +202,46 @@ class SlidingWindowDoubleTracker:
                     offset_y = offset_w
             # we want to estimate the distance between the two parabola
             # by looking at it's coefficients
-            # line_offset = self.get_line_offset(lane_fit_y, lane_fit_w)
+            line_offset = self.get_line_offset(lane_fit_y, lane_fit_w)
             if np.count_nonzero(image_y) < self.minimum_pixels:
                 lane_fit = lane_fit_w
                 offset = offset_w
             else:
                 lane_fit = lane_fit_y
                 offset = offset_y
-            # self.line_offset_mean.append(line_offset)
+            self.line_offset_mean.append(line_offset)
             self.coeff_a.append(lane_fit[0])
             self.coeff_b.append(lane_fit[1])
             self.coeff_c.append(lane_fit[2])
 
-        # line_offset = np.mean(self.line_offset_mean[-self.robust_factor:])
+        line_offset = np.mean(self.line_offset_mean[-self.robust_factor:])
         lane_fit[0] = np.mean(self.coeff_a[-self.robust_factor:])
         lane_fit[1] = np.mean(self.coeff_b[-self.robust_factor:])
         lane_fit[2] = np.mean(self.coeff_c[-self.robust_factor:])
                 
         test_image = test_image_y+test_image_w     
         
-        return lane_fit, test_image, offset, contours_midpt
+        #return lane_fit, test_image, offset, contours_midpt
+        return lane_fit, test_image, offset*line_offset, contours_midpt
 
-    # def get_line_offset(self, lane_fit_y, lane_fit_w):
-    #     x = np.arange(0,480,20)
-    #     offset_mean=[]
-    #     for p in x:
-    #         a,b,c = lane_fit_y[0],lane_fit_y[1],lane_fit_y[2]
-    #         f = lambda x: int(a*x**2 + b*x + c)
-    #         # p = 240 # query point
-    #         dirr = np.array([f(p-1),p-1],dtype=np.float32) - np.array([f(p+1),p+1],dtype=np.float32)
-    #         normal = dirr[::-1] * np.r_[1.,-1.]
-    #         normal = normal / np.linalg.norm(normal)
-    #         point = np.array([f(p),p],dtype=np.float32)
-    #         points_to_line = lambda p1,p2: ((p1[1]-p2[1])/(p1[0]-p2[0]),(p1[0]*p2[1]-p2[0]*p1[1])/(p1[0]-p2[0]))
-    #         m, q = points_to_line(point, point+normal)
-    #         a,b,c = lane_fit_w[0],lane_fit_w[1],lane_fit_w[2]
-    #         point_on_white = np.roots([c-q,b-m,a])
-    #         line_offset = np.linalg.norm(point-point_on_white).astype(int)//2
-    #         offset_mean.append(line_offset)
-    #     return np.mean(line_offset).astype(int)
+    def get_line_offset(self, lane_fit_y, lane_fit_w):
+        x = np.arange(0,480,20)
+        offset_mean=[]
+        #for p in x:
+        a,b,c = lane_fit_y[0],lane_fit_y[1],lane_fit_y[2]
+        f = lambda x: int(a*x**2 + b*x + c)
+        p = 240 # query point
+        dirr = np.array([f(p-1),p-1],dtype=np.float32) - np.array([f(p+1),p+1],dtype=np.float32)
+        normal = dirr[::-1] * np.r_[1.,-1.]
+        normal = normal / np.linalg.norm(normal)
+        point = np.array([f(p),p],dtype=np.float32)
+        points_to_line = lambda p1,p2: ((p1[1]-p2[1])/(p1[0]-p2[0]),(p1[0]*p2[1]-p2[0]*p1[1])/(p1[0]-p2[0]))
+        m, q = points_to_line(point, point+normal)
+        a,b,c = lane_fit_w[0],lane_fit_w[1],lane_fit_w[2]
+        point_on_white = np.roots([c-q,b-m,a])
+        line_offset = np.linalg.norm(point-point_on_white).astype(int)//2
+        offset_mean.append(line_offset)
+        return np.mean(line_offset).astype(int)
 
     def yellow_line_fit(self, image_y, test_image_y, draw_windows):
         # Find Contours yellow
@@ -514,12 +515,15 @@ class TrajectoryFilter():
         thresh_frame_w = self.filter_w.process(warped_frame)
         # Try to fit a quadratic curve to the mid line
         line_fit, self.plot_image, offset, contours_midpt = self.tracker.search(image_y=thresh_frame_y, image_w=thresh_frame_w, draw_windows=True)
-        lane_offset = self.line_offset*offset
+        #lane_offset = self.line_offset*offset
+        lane_offset = offset
+        print(offset)
+        
         observations = self.cam2rob(contours_midpt)
         self.line_found = True
         target = self.process_target(line_fit, lane_offset)            
         trajectory = self.build_trajectory(target)
         self.draw_path()
         # go back to street view
-        self.plot_image = self.projector.iwarp(self.plot_image) 
+        #self.plot_image = self.projector.iwarp(self.plot_image) 
         return self.line_found, trajectory, observations
