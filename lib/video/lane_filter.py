@@ -175,8 +175,8 @@ class SlidingWindowDoubleTracker:
         assert robust_factor >= 1
         self.robust_factor = robust_factor
         # Minimum mask pixels to initiate line search
-        self.minimum_pixels = 4000
-        self.contour_min_area = 200
+        self.minimum_pixels = 2000
+        self.contour_min_area = 100
         self.last_seen_yellow_pos = [np.array([320,480])]
         self.max_line_offset = 250
         self.line_offset_mean = []
@@ -516,14 +516,14 @@ class TrajectoryFilter():
         # Try to fit a quadratic curve to the mid line
         line_fit, self.plot_image, offset, contours_midpt = self.tracker.search(image_y=thresh_frame_y, image_w=thresh_frame_w, draw_windows=True)
         #lane_offset = self.line_offset*offset
-        lane_offset = offset
+        lane_offset = offset//2
         print(offset)
-        
+
         observations = self.cam2rob(contours_midpt)
         self.line_found = True
         target = self.process_target(line_fit, lane_offset)            
         trajectory = self.build_trajectory(target)
         self.draw_path()
         # go back to street view
-        #self.plot_image = self.projector.iwarp(self.plot_image) 
+        self.plot_image = self.projector.iwarp(self.plot_image) 
         return self.line_found, trajectory, observations
