@@ -417,16 +417,17 @@ class TrajectoryFilter():
     If the line is found and verified, then it returns the best quadratic fit (in lane space), the
     camera offset (d) and inclination (theta~)
     """
-    def __init__(self, projector, filter_y, filter_w, filter_r,tracker, segmentator,semantic_mapper):
+    #def __init__(self, projector, filter_y, filter_w, filter_r,tracker, segmentator,semantic_mapper):
+    def __init__(self, projector, filter_y, filter_w, tracker):
         self.projector = projector
         self.filter_y = filter_y
         self.filter_w = filter_w
-        self.filter_r = filter_r
+        # self.filter_r = filter_r
         self.tracker = tracker
-        self.filter_dict     = {'white': self.filter_w, 'yellow': self.filter_y, 'red': self.filter_r}
-        self.mask_dict       = {'white': None, 'yellow': None, 'red': None}
-        self.segmentator = segmentator
-        self.semantic_mapper = semantic_mapper
+        # self.filter_dict     = {'white': self.filter_w, 'yellow': self.filter_y, 'red': self.filter_r}
+        # self.mask_dict       = {'white': None, 'yellow': None, 'red': None}
+        # self.segmentator = segmentator
+        # self.semantic_mapper = semantic_mapper
         self.line_found = False
         self.plot_image = None
         self.trajectory_width = 0.21 #[m]
@@ -541,15 +542,15 @@ class TrajectoryFilter():
         line_fit, self.plot_image, offset, contours_midpt = self.tracker.search(image_y=thresh_frame_y, image_w=thresh_frame_w, draw_windows=True)
         #lane_offset = self.line_offset*offset
         lane_offset = offset//2
-        for fkey in self.filter_dict.keys():
-            self.mask_dict[fkey] = self.filter_dict[fkey].process(warped_frame)
-        mask_t = cv2.bitwise_or(self.mask_dict['white'], self.mask_dict['yellow'])
+        # for fkey in self.filter_dict.keys():
+        #     self.mask_dict[fkey] = self.filter_dict[fkey].process(warped_frame)
+        # mask_t = cv2.bitwise_or(self.mask_dict['white'], self.mask_dict['yellow'])
         # Segmentize the masks
-        segment_dict = self.segmentator.process(self.mask_dict)
-        object_dict, pfit, feat_dict  = self.semantic_mapper.process(segment_dict)
-        for obj_lst in object_dict.values():
-            for object in obj_lst:
-                cv2.drawContours(self.plot_image, object['contour'], -1, OBJ_COLOR_DICT[object['class']], 3)
+        # segment_dict = self.segmentator.process(self.mask_dict)
+        # object_dict, pfit, feat_dict  = self.semantic_mapper.process(segment_dict)
+        # for obj_lst in object_dict.values():
+        #     for object in obj_lst:
+        #         cv2.drawContours(self.plot_image, object['contour'], -1, OBJ_COLOR_DICT[object['class']], 3)
         
         observations = self.cam2rob(contours_midpt)
         self.line_found = True
