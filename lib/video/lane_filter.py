@@ -9,13 +9,32 @@ import functools
 from .utils import *
 from .binarize import *
 from ..trajectory import Trajectory
+from .semantic_mapper import *
+
+OBJ_COLOR_DICT = {
+    ObjectType.UNKNOWN: (0, 128, 128),
+    ObjectType.YELLOW_LINE: (255, 255, 0),
+    ObjectType.WHITE_LINE:  (255, 0, 0),
+    ObjectType.DUCK: (0, 255, 255),
+    ObjectType.CONE: (255, 0, 0),
+    ObjectType.ROBOT: (0, 0, 128),
+    ObjectType.WALL: (255, 0, 255),
+    ObjectType.RIGHT_LINE: (255, 255, 255),
+    ObjectType.LEFT_LINE:  (0, 0, 255)
+}
+
 
 class CenterLineFilter:
     def __init__(self):
         # Yellow of line is between 14 and 22 in h channel
-        self.yellow_thresh = (19, 24)
-        self.s_thresh = (80, 150)
-        self.l_thresh = (0, 255)
+        # self.yellow_thresh = (19, 24)
+        # self.s_thresh = (80, 150)
+        # self.l_thresh = (0, 255)
+
+        # Filter for the case of semantic mapper 
+        self.yellow_thresh = (20, 35)
+        self.s_thresh = (65, 190)
+        self.l_thresh = (30, 255)
         pass
     def process(self, frame):
         def preproc(image):
@@ -398,11 +417,16 @@ class TrajectoryFilter():
     If the line is found and verified, then it returns the best quadratic fit (in lane space), the
     camera offset (d) and inclination (theta~)
     """
-    def __init__(self, projector, filter_y, filter_w, tracker):
+    def __init__(self, projector, filter_y, filter_w, filter_r,tracker, segmentator,semantic_mapper):
         self.projector = projector
         self.filter_y = filter_y
         self.filter_w = filter_w
+        self.filter_r = filter_r
         self.tracker = tracker
+        self.filter_dict     = {'white': self.filter_w, 'yellow': self.filter_y, 'red': self.filter_r}
+        self.mask_dict       = {'white': None, 'yellow': None, 'red': None}
+        self.segmentator = segmentator
+        self.semantic_mapper = semantic_mapper
         self.line_found = False
         self.plot_image = None
         self.trajectory_width = 0.21 #[m]
@@ -517,13 +541,21 @@ class TrajectoryFilter():
         line_fit, self.plot_image, offset, contours_midpt = self.tracker.search(image_y=thresh_frame_y, image_w=thresh_frame_w, draw_windows=True)
         #lane_offset = self.line_offset*offset
         lane_offset = offset//2
-        print(offset)
-
+        for fkey in self.filter_dict.keys():
+            self.mask_dict[fkey] = self.filter_dict[fkey].process(warped_frame)
+        mask_t = cv2.bitwise_or(self.mask_dict['white'], self.mask_dict['yellow'])
+        # Segmentize the masks
+        segment_dict = self.segmentator.process(self.mask_dict)
+        object_dict, pfit, feat_dict  = self.semantic_mapper.process(segment_dict)
+        for obj_lst in object_dict.values():
+            for object in obj_lst:
+                cv2.drawContours(self.plot_image, object['contour'], -1, OBJ_COLOR_DICT[object['class']], 3)
+        
         observations = self.cam2rob(contours_midpt)
         self.line_found = True
         target = self.process_target(line_fit, lane_offset)            
         trajectory = self.build_trajectory(target)
         self.draw_path()
         # go back to street view
-        self.plot_image = self.projector.iwarp(self.plot_image) 
+        #self.plot_image = self.projector.iwarp(self.plot_image) 
         return self.line_found, trajectory, observations

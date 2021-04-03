@@ -18,36 +18,6 @@ from ..planner import *
 from ..transform import FrenetDKTransform
 from ..platform import Unicycle
 
-# class PerspectiveWarper:
-#     def __init__(self, dest_size=(640, 480),
-#                  src=np.float32([
-#                      (0.3796, 0.4438),
-#                      (0, 0.9396),
-#                      (1, 0.9396),
-#                      (0.6281, 0.4438)]),
-#                  dest=np.float32([(0.3, 0), (0.3, 1), (0.7, 1), (0.7, 0)])):
-#         self.dest_size = dest_size
-#         dest_size = np.float32(dest_size)
-#         self.src = src * dest_size
-#         self.dest = dest * dest_size
-#         self.M = cv2.getPerspectiveTransform(self.src, self.dest)
-#         self.iM = cv2.getPerspectiveTransform(self.dest, self.src)
-
-#     def warp(self, frame, draw=False):
-#         warped_frame = cv2.warpPerspective(frame, self.M, self.dest_size)
-#         if draw:
-#             fig, axs = plt.subplots(1, 2)
-#             axs[0].imshow(frame)
-#             axs[0].plot(self.src[:, 0], self.src[:, 1], 'r')
-#             axs[1].imshow(warped_frame)
-#             axs[1].plot(self.dest[:, 0], self.dest[:, 1], 'r')
-#             plt.show()
-
-#         return warped_frame
-
-    # def iwarp(self, frame):
-    #     return cv2.warpPerspective(frame, self.iM, self.dest_size)
-
 def frenet_to_glob(trajectory, planner, projection):
     frenet_path = planner.opt_path_tot
     path = []
@@ -73,12 +43,17 @@ def test_duckietown_planner(*args, **kwargs):
                         camera_rand=False)
 
     # Lines
-    perspective_projector = PerspectiveWarper()
+    perspective_projector = PerspectiveWarperOld()
     line_filter = CenterLineFilter()
     lat_line_filter = LateralLineFilter()
     lat_line_tracker = SlidingWindowDoubleTracker(robust_factor=1)
     transformer = FrenetDKTransform()
-    lateral_lane_filter = TrajectoryFilter(perspective_projector, line_filter, lat_line_filter, lat_line_tracker)
+    # Segmentator 
+    segmentator     = Segmentator()
+    # Semantic Mapper 
+    red_line_filter      = RedFilter()
+    semantic_mapper = SemanticMapper()
+    lateral_lane_filter = TrajectoryFilter(perspective_projector, line_filter, lat_line_filter, red_line_filter, lat_line_tracker, segmentator, semantic_mapper)
     # Controller
     controller = FrenetIOLController(.5, 0.0, 27, 0.0, 0.0)
     # Plot 
@@ -145,5 +120,5 @@ def test_duckietown_planner(*args, **kwargs):
         env.render()
         return [im, im2, curve_line, curve_unwarped_line]
     ani = animation.FuncAnimation(fig, animate, frames=500, interval=50, blit=True)
-    #ani.save("./prova.mp4", writer="ffmpeg")
+    ani.save("./prova.mp4", writer="ffmpeg")
     plt.show()
