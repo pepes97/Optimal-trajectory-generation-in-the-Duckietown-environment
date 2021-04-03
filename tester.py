@@ -39,7 +39,8 @@ TEST_MAP = {
     'ransac': test_ransac, 
     'duckietown_planner': test_duckietown_planner,
     'ekf_slam': test_ekf_slam,
-    'dt_ekf_slam': test_duckietown_ekf_slam
+    'dt_ekf_slam': test_duckietown_ekf_slam, 
+    'dt_mapper':test_mapper_planner
 }
 
 def handle_parser(args):
