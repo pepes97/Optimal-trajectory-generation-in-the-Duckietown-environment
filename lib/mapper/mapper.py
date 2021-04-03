@@ -1,7 +1,19 @@
 from ..video import *
 from ..transform import FrenetDKTransform
 from ..controller import FrenetIOLController
+from ..video import *
 
+OBJ_COLOR_DICT = {
+    ObjectType.UNKNOWN: (0, 128, 128),      # medium dark turquoise
+    ObjectType.YELLOW_LINE: (255, 255, 0),  # yellow
+    ObjectType.WHITE_LINE:  (255, 255, 255),# white  
+    ObjectType.DUCK: (0, 255, 255),         # light blue
+    ObjectType.CONE: (255, 0, 0),           # red
+    ObjectType.ROBOT: (0, 0, 128),          # dark blue
+    ObjectType.WALL: (255, 0, 255),         # fuchsia
+    ObjectType.RIGHT_LINE:(220, 139, 0),    # orange
+    ObjectType.LEFT_LINE:  (122, 0, 174)    # violet
+}
 
 class Mapper():
     def __init__(self):
@@ -17,9 +29,9 @@ class Mapper():
         self.semantic_mapper = SemanticMapper()
         self.lat_filter      = TrajectoryFilter(self.projector, self.yellow_filter, self.white_filter, self.tracker)
         # Adjust filters properties
-        self.yellow_filter.yellow_thresh = (20, 35)
-        self.yellow_filter.s_thresh = (65, 190)
-        self.yellow_filter.l_thresh = (30, 255)
+        # self.yellow_filter.yellow_thresh = (20, 35)
+        # self.yellow_filter.s_thresh = (65, 190)
+        # self.yellow_filter.l_thresh = (30, 255)
         self.obstacle_tracker = ObstacleTracker()
     
     def process_obstacles(self, frame):
@@ -52,6 +64,7 @@ class Mapper():
         wframe = cv2.bitwise_and(wframe, wframe, mask=obstacle_mask)
         # Obstacle mask generation END
         
+       
         # Threshold warped frame to find yellow mid line
         thresh_frame_y = self.yellow_filter.process(wframe)
         thresh_frame_w = self.white_filter.process(wframe)
@@ -59,14 +72,17 @@ class Mapper():
         line_fit, self.lat_filter.plot_image, offset, contours_midpt = self.tracker.search(image_y=thresh_frame_y, image_w=thresh_frame_w, draw_windows=True)
         #lane_offset = self.line_offset*offset
         lane_offset = offset//2
-
+        for obj_lst in object_dict.values():
+            for object in obj_lst:
+                cv2.drawContours(self.lat_filter.plot_image, object['contour'], -1, OBJ_COLOR_DICT[object['class']], 3)
+        
         observations = self.lat_filter.cam2rob(contours_midpt)
         self.lat_filter.line_found = True
         target = self.lat_filter.process_target(line_fit, lane_offset)            
         trajectory = self.lat_filter.build_trajectory(target)
         self.lat_filter.draw_path()
         # go back to street view
-        self.lat_filter.plot_image = self.lat_filter.projector.iwarp(self.lat_filter.plot_image)
+        #self.lat_filter.plot_image = self.lat_filter.projector.iwarp(self.lat_filter.plot_image)
         return self.lat_filter.line_found, trajectory, observations
 
     

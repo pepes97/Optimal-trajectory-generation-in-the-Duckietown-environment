@@ -13,17 +13,16 @@ logger = logging.getLogger(__name__)
 IMAGE_PATH_LST = [f'./images/dt_samples/{i}.jpg' for i in range(0, 170)]
 
 OBJ_COLOR_DICT = {
-    ObjectType.UNKNOWN: (0, 128, 128),
-    ObjectType.YELLOW_LINE: (255, 255, 0),
-    ObjectType.WHITE_LINE:  (255, 0, 0),
-    ObjectType.DUCK: (0, 255, 255),
-    ObjectType.CONE: (255, 0, 0),
-    ObjectType.ROBOT: (0, 0, 128),
-    ObjectType.WALL: (255, 0, 255),
-    ObjectType.RIGHT_LINE: (255, 255, 255),
-    ObjectType.LEFT_LINE:  (0, 0, 255)
+    ObjectType.UNKNOWN: (0, 128, 128),      # medium dark turquoise
+    ObjectType.YELLOW_LINE: (255, 255, 0),  # yellow
+    ObjectType.WHITE_LINE:  (255, 255, 255),# white  
+    ObjectType.DUCK: (0, 255, 255),         # light blue
+    ObjectType.CONE: (255, 0, 0),           # red
+    ObjectType.ROBOT: (0, 0, 128),          # dark blue
+    ObjectType.WALL: (255, 0, 255),         # fuchsia
+    ObjectType.RIGHT_LINE: (255, 255, 255), # white
+    ObjectType.LEFT_LINE:  (122, 0, 174)    # violet
 }
-
 def test_semantic_mapper(*args, **kwargs):
     # Define cv pipeline objects
     projector       = PerspectiveWarper()
@@ -35,10 +34,10 @@ def test_semantic_mapper(*args, **kwargs):
     segmentator     = Segmentator()
     segment_dict    = {'white': None, 'yellow': None, 'red': None}
     semantic_mapper = SemanticMapper()
-    # Adjust filters properties
-    yellow_filter.yellow_thresh = (20, 35)
-    yellow_filter.s_thresh = (65, 190)
-    yellow_filter.l_thresh = (30, 255)
+    #Adjust filters properties
+    # yellow_filter.yellow_thresh = (20, 35)
+    # yellow_filter.s_thresh = (65, 190)
+    # yellow_filter.l_thresh = (30, 255)
     # Prepare the matplotlib container
     fig, axs = plt.subplots(1, 3, figsize=(20, 5))
     im0 = im1 = im2 = None
@@ -68,12 +67,14 @@ def test_semantic_mapper(*args, **kwargs):
             im0 = axs[0].imshow(frame)
             im1 = axs[1].imshow(wframe)
             im2 = axs[2].imshow(pframe)
-            p0,  = axs[2].plot(pline_fit, ploty, 'r', linewidth=2)
+            if pfit is not None:
+                p0,  = axs[2].plot(pline_fit, ploty, 'r', linewidth=2)
         else:
             im0.set_data(frame)
             im1.set_data(wframe)
             im2.set_data(pframe)
-            p0.set_xdata(pline_fit)
+            if pfit is not None:
+                p0.set_xdata(pline_fit)
         plt.pause(0.01)
         plt.draw()
 

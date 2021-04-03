@@ -73,24 +73,30 @@ class SemanticMapper:
         # Handle yellow elements
         for i, fdict in enumerate(feat_dict['yellow']):
             area = fdict['area']
+            center = fdict['center']
             eigratio = fdict['eigs'][0] / fdict['eigs'][1]
-            if area >= 1500:
+            if area > 405 or eigratio > 50:
                 fdict['class'] = ObjectType.DUCK
-            elif eigratio > 23. or area < 400 or eigratio < 2.:
-                fdict['class'] = ObjectType.UNKNOWN
-            else:
+            elif (area > 200 and area < 400 and eigratio > 3 and eigratio < 15):
                 fdict['class'] = ObjectType.YELLOW_LINE
+            else:
+                fdict['class'] = ObjectType.UNKNOWN
             object_dict[fdict['class']].append(fdict)
-            #center = fdict['center']
+            
             #print(f'YELLOW_{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
+        
         # Handle white elements
         for i, fdict in enumerate(feat_dict['white']):
             eigratio = fdict['eigs'][0] / fdict['eigs'][1]
-            if eigratio >= 100. and eigratio <= 500. or fdict['area'] > 9000.:
+            area = fdict['area']
+            center = fdict['center']
+            if area > 100. or (area > 500 and area > 4000) or (eigratio > 60 and area > 9000):
                 fdict['class'] = ObjectType.WHITE_LINE
             else:
                 fdict['class'] = ObjectType.UNKNOWN
             object_dict[fdict['class']].append(fdict)
+            #print(f'WHITE{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
+
         # Handle red elements
         # TODO
         # Fit yellow line if possible

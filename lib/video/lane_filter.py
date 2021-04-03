@@ -12,29 +12,29 @@ from ..trajectory import Trajectory
 from .semantic_mapper import *
 
 OBJ_COLOR_DICT = {
-    ObjectType.UNKNOWN: (0, 128, 128),
-    ObjectType.YELLOW_LINE: (255, 255, 0),
-    ObjectType.WHITE_LINE:  (255, 0, 0),
-    ObjectType.DUCK: (0, 255, 255),
-    ObjectType.CONE: (255, 0, 0),
-    ObjectType.ROBOT: (0, 0, 128),
-    ObjectType.WALL: (255, 0, 255),
-    ObjectType.RIGHT_LINE: (255, 255, 255),
-    ObjectType.LEFT_LINE:  (0, 0, 255)
+    ObjectType.UNKNOWN: (0, 128, 128),      # medium dark turquoise
+    ObjectType.YELLOW_LINE: (255, 255, 0),  # yellow
+    ObjectType.WHITE_LINE:  (255, 255, 255),# white  
+    ObjectType.DUCK: (0, 255, 255),         # light blue
+    ObjectType.CONE: (255, 0, 0),           # red
+    ObjectType.ROBOT: (0, 0, 128),          # dark blue
+    ObjectType.WALL: (255, 0, 255),         # fuchsia
+    ObjectType.RIGHT_LINE: (255, 255, 255), # white
+    ObjectType.LEFT_LINE:  (122, 0, 174)    # violet
 }
 
 
 class CenterLineFilter:
     def __init__(self):
         # Yellow of line is between 14 and 22 in h channel
-        # self.yellow_thresh = (19, 24)
-        # self.s_thresh = (80, 150)
-        # self.l_thresh = (0, 255)
+        self.yellow_thresh = (19, 24)
+        self.s_thresh = (80, 150)
+        self.l_thresh = (0, 255)
 
         # Filter for the case of semantic mapper 
-        self.yellow_thresh = (20, 35)
-        self.s_thresh = (65, 190)
-        self.l_thresh = (30, 255)
+        # self.yellow_thresh = (20, 35)
+        # self.s_thresh = (65, 190)
+        # self.l_thresh = (30, 255)
         pass
     def process(self, frame):
         def preproc(image):
@@ -136,7 +136,7 @@ class SlidingWindowTracker:
             contours_midpt.append([px, py])
         contours_midpt = np.array(contours_midpt)
         if draw_windows:
-            cv2.drawContours(test_image, contours, -1, (0, 255, 0), 3)
+            #cv2.drawContours(test_image, contours, -1, (0, 255, 0), 3)
             for i in range(len(contours)):
                 cv2.circle(test_image, (contours_midpt[i, 0], contours_midpt[i, 1]), 2, (255, 0, 0), -1)
         """
@@ -275,7 +275,7 @@ class SlidingWindowDoubleTracker:
             contours_midpt.append([px, py])
         contours_midpt = np.array(contours_midpt)
         if draw_windows:
-            cv2.drawContours(test_image_y, contours_y, -1, (0, 255, 0), 3)
+            #cv2.drawContours(test_image_y, contours_y, -1, (0, 255, 0), 3)
             for i in range(len(contours_y)):
                 cv2.circle(test_image_y, (contours_midpt[i, 0], contours_midpt[i, 1]), 2, (255, 0, 0), -1)
         if len(contours_midpt)==0:
@@ -328,8 +328,8 @@ class SlidingWindowDoubleTracker:
                 points = left
                 contour = contour_left
                 offset = 3#1
-            if draw_windows:
-                cv2.drawContours(test_image_w, contour, -1, (0, 255, 0), 3)
+            # if draw_windows:
+            #     cv2.drawContours(test_image_w, contour, -1, (0, 255, 0), 3)
             for i in range(len(contour)):
                 mdpt = np.array(np.mean(contour,axis=(0,1)),np.int32)
                 cv2.circle(test_image_w, (mdpt[0], mdpt[1]), 2, (255, 0, 0), -1)
