@@ -39,10 +39,19 @@ class Mapper():
     
     def process(self, frame):  
         wframe,obstacles, object_dict = self.process_obstacles(frame)
-        #TODO 
-        """
-            Make mask for obstacle detection
-        """
+        # Obstacle mask generation START
+        obstacle_mask = np.zeros_like(wframe, dtype='uint8')
+        obstacle_contour_lst = []
+        for obstacle in obstacles:
+            obstacle_contour_lst.append(obstacle['contour'])
+        obstacle_mask = cv2.drawContours(obstacle_mask, obstacle_contour_lst, -1, (255, 255, 255),
+                                         thickness=cv2.FILLED)
+        obstacle_mask = cv2.bitwise_not(obstacle_mask)
+        obstacle_mask = cv2.cvtColor(obstacle_mask, cv2.COLOR_BGR2GRAY)
+        ret, obstacle_mask = cv2.threshold(obstacle_mask, 10, 255, cv2.THRESH_BINARY)
+        wframe = cv2.bitwise_and(wframe, wframe, mask=obstacle_mask)
+        # Obstacle mask generation END
+        
         # Threshold warped frame to find yellow mid line
         thresh_frame_y = self.yellow_filter.process(wframe)
         thresh_frame_w = self.white_filter.process(wframe)
