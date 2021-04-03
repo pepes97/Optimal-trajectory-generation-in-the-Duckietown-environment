@@ -23,6 +23,7 @@ OBJ_COLOR_DICT = {
     ObjectType.RIGHT_LINE: (255, 255, 255), # white
     ObjectType.LEFT_LINE:  (122, 0, 174)    # violet
 }
+
 def test_semantic_mapper(*args, **kwargs):
     # Define cv pipeline objects
     projector       = PerspectiveWarper()
