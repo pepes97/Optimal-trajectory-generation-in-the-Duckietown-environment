@@ -20,7 +20,7 @@ OBJ_COLOR_DICT = {
     ObjectType.CONE: (255, 0, 0),           # red
     ObjectType.ROBOT: (0, 0, 128),          # dark blue
     ObjectType.WALL: (255, 0, 255),         # fuchsia
-    ObjectType.RIGHT_LINE: (255, 255, 255), # white
+    ObjectType.RIGHT_LINE:(220, 139, 0),    # orange
     ObjectType.LEFT_LINE:  (122, 0, 174)    # violet
 }
 

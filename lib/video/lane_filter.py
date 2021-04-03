@@ -19,7 +19,7 @@ OBJ_COLOR_DICT = {
     ObjectType.CONE: (255, 0, 0),           # red
     ObjectType.ROBOT: (0, 0, 128),          # dark blue
     ObjectType.WALL: (255, 0, 255),         # fuchsia
-    ObjectType.RIGHT_LINE: (255, 255, 255), # white
+    ObjectType.RIGHT_LINE:(220, 139, 0),    # orange
     ObjectType.LEFT_LINE:  (122, 0, 174)    # violet
 }
 
@@ -274,7 +274,7 @@ class SlidingWindowDoubleTracker:
             py = int(ctr_moment['m01'] / ctr_moment['m00'])
             contours_midpt.append([px, py])
         contours_midpt = np.array(contours_midpt)
-        if draw_windows:
+        #if draw_windows:
             #cv2.drawContours(test_image_y, contours_y, -1, (0, 255, 0), 3)
             for i in range(len(contours_y)):
                 cv2.circle(test_image_y, (contours_midpt[i, 0], contours_midpt[i, 1]), 2, (255, 0, 0), -1)
