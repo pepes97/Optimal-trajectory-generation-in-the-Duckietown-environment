@@ -40,7 +40,8 @@ TEST_MAP = {
     'duckietown_planner': test_duckietown_planner,
     'ekf_slam': test_ekf_slam,
     'dt_ekf_slam': test_duckietown_ekf_slam, 
-    'dt_mapper':test_mapper_planner
+    'dt_mapper':test_mapper_planner,
+    'dt_mapper_semantic':test_mapper_semantic_planner
 }
 
 def handle_parser(args):

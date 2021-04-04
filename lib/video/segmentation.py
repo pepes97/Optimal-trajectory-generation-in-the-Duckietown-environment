@@ -52,7 +52,7 @@ class Segmentator:
     """
     def __init__(self, *args, **kwargs):
         self.segmentator_dict = {'white':  SegmentatorChannel(min_area=500),
-                                 'yellow': SegmentatorChannel(min_area=200),
+                                 'yellow': SegmentatorChannel(min_area=20),
                                  'red':    SegmentatorChannel()}
 
     def process(self, mask_dict):

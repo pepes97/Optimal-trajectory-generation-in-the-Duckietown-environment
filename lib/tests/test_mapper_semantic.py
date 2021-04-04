@@ -16,6 +16,8 @@ from ..transform import FrenetDKTransform
 from ..platform import Unicycle
 from ..mapper import *
 
+IMAGE_PATH_LST = [f'./images/dt_samples/{i}.jpg' for i in range(0, 170)]
+
 
 def frenet_to_glob(trajectory, planner, projection):
     frenet_path = planner.opt_path_tot
@@ -36,7 +38,7 @@ def compute_ortogonal_vect(trajectory, s):
     t_r = np.arctan2(t_grad[1], t_grad[0])
     return np.array([-np.sin(t_r), np.cos(t_r)])
 
-def test_mapper_planner(*args, **kwargs):
+def test_mapper_semantic_planner(*args, **kwargs):
     env = DuckietownEnv(seed=123,
                         map_name='loop_empty',
                         camera_rand=False)
@@ -48,17 +50,11 @@ def test_mapper_planner(*args, **kwargs):
     # Controller
     controller = FrenetIOLController(.5, 0.0, 27, 0.0, 0.0)
     # Mapper
-    mapper = Mapper()
+    mapper = MapperSemantic()
     # Env initialize
     env.reset()
     env.render()
     obs, reward, done, info = env.step(np.array([0.0, 0.0]))
-    # Plot 
-    fig, ax = plt.subplots(1, 2)
-    im = ax[0].imshow(obs)
-    im2 = ax[1].imshow(obs)
-    curve_line, = ax[0].plot([], [], 'r')
-    curve_unwarped_line, = ax[1].plot([], [], 'r')
     # Global variables 
     global u, robot_p, robot_dp, robot_ddp, pos_s, pos_d
     # Unicycle
@@ -69,8 +65,13 @@ def test_mapper_planner(*args, **kwargs):
     robot_ddp = np.zeros(3)
     u = np.zeros(2)
     # Initialization
-    line_found, trajectory, observations = mapper.process(obs)
+    line_found, trajectory = mapper.process(obs)
     est_pt = transformer.estimatePosition(trajectory, robot_p)
+    # Plots
+    fig, axs = plt.subplots(1, 3, figsize=(20, 5))
+    im1 = axs[0].imshow(obs)
+    im2 = axs[1].imshow(obs)
+    im3 = axs[2].imshow(obs)
     # Robot pose in frenet
     robot_fpose = transformer.transform(robot_p)
     # Pose initizialize
@@ -82,11 +83,10 @@ def test_mapper_planner(*args, **kwargs):
 
     def animate(i):
         global u, robot_p, robot_dp, robot_ddp, pos_s, pos_d
-        
         obs, reward, done, info = env.step(u)
         actual_u = np.array(info['Simulator']['action'])
         robot_p, robot_dp = robot.step(actual_u, dt)
-        line_found, trajectory, observations = mapper.process(obs)
+        line_found, trajectory = mapper.process(obs)
 
         if line_found:
             # Estimate frenet frame
@@ -96,20 +96,23 @@ def test_mapper_planner(*args, **kwargs):
             robot_fpose = transformer.transform(robot_p)
             # Get replanner step
             pos_s, pos_d = planner.replanner(time = i*dt)
-            mapper.lat_filter.proj_planner = trajectory.compute_pt(est_pt)
-            mapper.lat_filter.path_planner = frenet_to_glob(trajectory, planner, est_pt)
+            mapper.proj_planner = trajectory.compute_pt(est_pt)
+            mapper.path_planner = frenet_to_glob(trajectory, planner, est_pt)
             #Compute error
             error = np.array([0, pos_d[0]]) - robot_fpose[0:2]
             derror = np.array([pos_s[1], pos_d[1]])
             # Get curvature
             curvature = trajectory.compute_curvature(est_pt)
             # Compute control
-            u = controller.compute(robot_fpose, error, derror, curvature)       
-
-        im.set_array(mapper.lat_filter.plot_image)
-        im2.set_array(obs)
+            u = controller.compute(robot_fpose, error, derror, curvature)  
+        
+        im1.set_data(obs)
+        im2.set_data(mapper.plot_image_w)
+        im3.set_data(mapper.plot_image_p)
         env.render()
-        return [im, im2, curve_line, curve_unwarped_line]
+        return [im1, im2, im3]
     ani = animation.FuncAnimation(fig, animate, frames=500, interval=50, blit=True)
-    #ani.save("./prova.mp4", writer="ffmpeg")
+    ani.save("./prova_magic.mp4", writer="ffmpeg")
     plt.show()
+    
+

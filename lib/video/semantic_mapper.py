@@ -10,6 +10,14 @@ from .binarize import *
 from .obstacle_recognition import *
 from ..transform import *
 
+def linspace():
+    xx = np.arange(0,640)
+    xx = np.tile(xx[None],(480,1))[...,None]
+    yy = np.arange(0,480)
+    yy = np.tile(yy[...,None],(1,640))[...,None]
+    linspace = np.concatenate([xx,yy],axis=-1)
+    return linspace
+
 class ObjectType(Enum):
     UNKNOWN     = -1
     YELLOW_LINE = 0
@@ -53,9 +61,12 @@ class SemanticMapper:
     """
     def __init__(self, *args, **kwargs):
         self.feat_ext = FeatureExtractor()
+        self.last_yellow_fit = None
+        self.last_white_fit = None
+        self.right = True
         pass
 
-    def process(self, segment_dict):
+    def process(self, segment_dict, mask_cont):
         # Extract features for each color
         feat_dict = {'white': None, 'yellow': None, 'red': None}
         object_dict = {ObjectType.UNKNOWN: [],
@@ -75,40 +86,45 @@ class SemanticMapper:
             area = fdict['area']
             center = fdict['center']
             eigratio = fdict['eigs'][0] / fdict['eigs'][1]
-            if area > 405 or eigratio > 50:
+            if area >= 800:
                 fdict['class'] = ObjectType.DUCK
-            elif (area > 200 and area < 400 and eigratio > 3 and eigratio < 15):
-                fdict['class'] = ObjectType.YELLOW_LINE
-            else:
+            elif eigratio > 23. or area < 100 or eigratio < 2.:
                 fdict['class'] = ObjectType.UNKNOWN
+            else:
+                fdict['class'] = ObjectType.YELLOW_LINE
             object_dict[fdict['class']].append(fdict)
             
-            #print(f'YELLOW_{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
+            print(f'YELLOW_{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
         
         # Handle white elements
         for i, fdict in enumerate(feat_dict['white']):
             eigratio = fdict['eigs'][0] / fdict['eigs'][1]
             area = fdict['area']
             center = fdict['center']
-            if area > 100. or (area > 500 and area > 4000) or (eigratio > 60 and area > 9000):
+            if eigratio >= 100. and eigratio <= 500. or fdict['area'] > 5000.:
                 fdict['class'] = ObjectType.WHITE_LINE
             else:
                 fdict['class'] = ObjectType.UNKNOWN
             object_dict[fdict['class']].append(fdict)
-            #print(f'WHITE{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
+            print(f'WHITE{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
 
         # Handle red elements
         # TODO
         # Fit yellow line if possible
         if len(object_dict[ObjectType.YELLOW_LINE]) < 2:
             yellow_fit = None
+            yellow_midpts = None
+            yellow_fit = self.last_yellow_fit
+            offset_y = 1
         else:
             yellow_midpts = np.zeros((2, len(object_dict[ObjectType.YELLOW_LINE])))
             for i, yp in enumerate(object_dict[ObjectType.YELLOW_LINE]):
                 yellow_midpts[:, i] = yp['center']
                 # Weight based on y-value of points (Lower points are heavier)
-                yellow_fit = np.polyfit(yellow_midpts[1, :], yellow_midpts[0, :], 1)
-        
+                yellow_fit = np.polyfit(yellow_midpts[1, :], yellow_midpts[0, :], 2)
+                self.last_yellow_fit = yellow_fit
+                offset_y = 1
+
         # If fit is possible, get closest right and left lane
         if yellow_fit is not None and len(object_dict[ObjectType.WHITE_LINE]) > 0:
             # Project distances on fit frame of reference
@@ -175,6 +191,50 @@ class SemanticMapper:
                     obj = object_dict[ObjectType.WHITE_LINE][idx]
                     obj['class'] = ObjectType.WALL
                     object_dict[ObjectType.WALL].append(obj)
-        # If fit is not available, try to use previous last fit to approximate which line the camera is looking at
         
-        return object_dict, yellow_fit, feat_dict
+        if len(object_dict[ObjectType.RIGHT_LINE]) == 1:      
+            # Compute the relative offset from the midpoint and all the white lines
+            obj = object_dict[ObjectType.RIGHT_LINE][0]
+            r_mask_white = cv2.drawContours(mask_cont, obj["contour"], -1, (255, 255, 255),
+                                         thickness=cv2.FILLED)
+            xy = linspace()
+            r_points = xy[r_mask_white[...,1]>0]
+            rx_points = r_points[:,0]
+            ry_points = r_points[:,1]
+            r_fit = np.polyfit(ry_points, rx_points, 2)
+            r_white_midpts = np.array([rx_points,ry_points])
+            l_white_midpts = None
+            l_fit = None
+            self.last_white_fit = r_fit
+            self.right = True
+            offset_w = -1
+           
+        elif len(object_dict[ObjectType.LEFT_LINE]) == 1: 
+            obj = object_dict[ObjectType.LEFT_LINE][0]
+            l_mask_white =cv2.drawContours(mask_cont, obj["contour"], -1, (255, 255, 255),
+                                         thickness=cv2.FILLED)
+            xy = linspace()
+            l_points = xy[l_mask_white[...,1]>0]
+            lx_points = l_points[:,0]
+            ly_points = l_points[:,1]
+            l_fit = np.polyfit(ly_points, lx_points, 2)
+            l_white_midpts = np.array([lx_points,ly_points])
+            r_white_midpts = None
+            r_fit = None
+            self.last_white_fit = l_fit
+            self.right = False
+            offset_w = 3
+
+        else:  
+            if self.right:
+                r_fit = self.last_white_fit
+                offset_w = -1
+                l_fit = None
+            else:
+                r_fit = None
+                l_fit = self.last_white_fit
+                offset_w = 3
+
+        #return object_dict, yellow_fit,yellow_midpts, right_white_fit, right_white_midpts,left_white_fit, left_white_midpts, feat_dict
+        return object_dict,yellow_fit,yellow_midpts,r_fit, l_fit, offset_y,offset_w
+        

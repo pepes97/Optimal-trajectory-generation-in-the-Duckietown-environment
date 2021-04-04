@@ -274,7 +274,7 @@ class SlidingWindowDoubleTracker:
             py = int(ctr_moment['m01'] / ctr_moment['m00'])
             contours_midpt.append([px, py])
         contours_midpt = np.array(contours_midpt)
-        #if draw_windows:
+        if draw_windows:
             #cv2.drawContours(test_image_y, contours_y, -1, (0, 255, 0), 3)
             for i in range(len(contours_y)):
                 cv2.circle(test_image_y, (contours_midpt[i, 0], contours_midpt[i, 1]), 2, (255, 0, 0), -1)
@@ -297,6 +297,7 @@ class SlidingWindowDoubleTracker:
         # Find Contours white  
         contours_w, _ = cv2.findContours(image_w, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         contours_w = list(filter(lambda ctr: cv2.contourArea(ctr) > self.contour_min_area, contours_w))
+        contours_w
         # Get midpoints for each contour
         right = []
         left = []
@@ -541,6 +542,7 @@ class TrajectoryFilter():
         # Try to fit a quadratic curve to the mid line
         line_fit, self.plot_image, offset, contours_midpt = self.tracker.search(image_y=thresh_frame_y, image_w=thresh_frame_w, draw_windows=True)
         #lane_offset = self.line_offset*offset
+        print(line_fit)
         lane_offset = offset//2
         # for fkey in self.filter_dict.keys():
         #     self.mask_dict[fkey] = self.filter_dict[fkey].process(warped_frame)
@@ -551,7 +553,6 @@ class TrajectoryFilter():
         # for obj_lst in object_dict.values():
         #     for object in obj_lst:
         #         cv2.drawContours(self.plot_image, object['contour'], -1, OBJ_COLOR_DICT[object['class']], 3)
-        
         observations = self.cam2rob(contours_midpt)
         self.line_found = True
         target = self.process_target(line_fit, lane_offset)            

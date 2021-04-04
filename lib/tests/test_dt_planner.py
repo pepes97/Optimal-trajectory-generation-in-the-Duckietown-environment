@@ -53,7 +53,7 @@ def test_duckietown_planner(*args, **kwargs):
     # Semantic Mapper 
     red_line_filter      = RedFilter()
     semantic_mapper = SemanticMapper()
-    lateral_lane_filter = TrajectoryFilter(perspective_projector, line_filter, lat_line_filter, red_line_filter, lat_line_tracker, segmentator, semantic_mapper)
+    lateral_lane_filter = TrajectoryFilter(perspective_projector, line_filter, lat_line_filter, lat_line_tracker)
     # Controller
     controller = FrenetIOLController(.5, 0.0, 27, 0.0, 0.0)
     # Plot 
