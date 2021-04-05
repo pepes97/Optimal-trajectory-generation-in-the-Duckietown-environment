@@ -17,7 +17,7 @@ class MapperSemantic():
     def __init__(self):
         self.projector       = PerspectiveWarper()
         self.yellow_filter   = CenterLineFilter()
-        self.yellow_filter.yellow_thresh = (19, 30)
+        self.yellow_filter.yellow_thresh = (19, 25)
         self.yellow_filter.s_thresh = (70, 180)
         self.yellow_filter.l_thresh = (10, 255)
         self.white_filter    = LateralLineFilter()
@@ -28,7 +28,7 @@ class MapperSemantic():
         self.segment_dict    = {'white': None, 'yellow': None, 'red': None}
         self.semantic_mapper = SemanticMapper()
         self.obstacle_tracker = ObstacleTracker()
-        self.minimum_pixels = 2000
+        self.minimum_pixels = 2050
         self.max_line_offset = 250
         self.robust_factor = 1
         self.line_offset_mean = []

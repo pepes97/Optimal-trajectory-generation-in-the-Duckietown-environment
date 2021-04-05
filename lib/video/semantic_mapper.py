@@ -223,7 +223,7 @@ class SemanticMapper:
             r_fit = None
             self.last_white_fit = l_fit
             self.right = False
-            offset_w = 3
+            offset_w = 2
 
         else:  
             if self.right:
@@ -233,7 +233,7 @@ class SemanticMapper:
             else:
                 r_fit = None
                 l_fit = self.last_white_fit
-                offset_w = 3
+                offset_w = 2
 
         #return object_dict, yellow_fit,yellow_midpts, right_white_fit, right_white_midpts,left_white_fit, left_white_midpts, feat_dict
         return object_dict,yellow_fit,yellow_midpts,r_fit, l_fit, offset_y,offset_w
