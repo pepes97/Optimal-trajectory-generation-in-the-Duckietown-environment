@@ -60,9 +60,9 @@ class LateralLineFilter:
         def preproc(image):
             # Extract yellow info
             r,g,b = np.split(cv2.blur(frame, (3, 3)),3,axis=-1)
-            mask_r = cv2.inRange(r, 150, 255)
-            mask_g = cv2.inRange(g, 128, 255)
-            mask_b = cv2.inRange(b, 150, 255)
+            mask_r = cv2.inRange(r, 100, 255)
+            mask_g = cv2.inRange(g, 100, 255)
+            mask_b = cv2.inRange(b, 100, 255)
             mask = cv2.bitwise_and(cv2.bitwise_and(mask_r, mask_g), mask_b)
             # Apply morphological operation to remove imperfections
             mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, (5, 5))

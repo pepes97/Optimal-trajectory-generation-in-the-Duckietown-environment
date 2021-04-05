@@ -94,7 +94,7 @@ class SemanticMapper:
                 fdict['class'] = ObjectType.YELLOW_LINE
             object_dict[fdict['class']].append(fdict)
             
-            print(f'YELLOW_{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
+            # print(f'YELLOW_{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
         
         # Handle white elements
         for i, fdict in enumerate(feat_dict['white']):
@@ -106,7 +106,7 @@ class SemanticMapper:
             else:
                 fdict['class'] = ObjectType.UNKNOWN
             object_dict[fdict['class']].append(fdict)
-            print(f'WHITE{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
+            # print(f'WHITE{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
 
         # Handle red elements
         # TODO

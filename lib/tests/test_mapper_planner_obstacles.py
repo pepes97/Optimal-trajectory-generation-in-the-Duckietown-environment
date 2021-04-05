@@ -15,12 +15,27 @@ from ..planner import *
 from ..transform import FrenetDKTransform
 from ..platform import Unicycle
 from ..mapper import *
+from ..sensor import StaticObstacle, ProximitySensor
+from operator import attrgetter
+from ..video.constants import DuckietownParameters as dp
+
 
 IMAGE_PATH_LST = [f'./images/dt_samples/{i}.jpg' for i in range(0, 170)]
 
+def frenet_to_glob_planner(planner, trajectory, frenet_paths, projection):
+    for path in frenet_paths:
+        for i in range(len(path.s)):
+            s = projection + (path.s[i] - planner.s0[0])
+            d = path.d[i] 
+            target_pos = trajectory.compute_pt(s) + \
+            compute_ortogonal_vect(trajectory, s) * d
+            path.x.append(target_pos[0])
+            path.y.append(target_pos[1])
+
+    return frenet_paths
 
 def frenet_to_glob(trajectory, planner, projection):
-    frenet_path = planner.opt_path_tot
+    frenet_path = planner.opt_path_tot 
     path = []
     for i in range(len(frenet_path.s)):
         s = projection + (frenet_path.s[i] - planner.s0[0])
@@ -31,6 +46,42 @@ def frenet_to_glob(trajectory, planner, projection):
     path = np.array(path)
     return path
 
+def check_collisions(path,obstacles):
+
+    for ob in obstacles:
+        obx = ob[0]
+        oby = ob[1]
+        distance = [((ix - obx) ** 2 + (iy - oby) ** 2) for ix, iy in zip(path.x, path.y)]
+        collision = any([di <= (dp.AGENT_SAFETY_RAD)**2 for di in distance])
+        if collision:
+            return False
+    return True           
+
+def obstacles_coordinates(obstacles,mapper):
+    obstacles_list = []
+    for ob in obstacles:
+        obstacles_list.append(ob["center"])
+
+    obstacles_list = np.array(obstacles_list)
+    if obstacles_list != []:
+        obs_rob = mapper.cam2rob(obstacles_list)
+        return obs_rob
+    else:
+        return []
+
+def check_paths(frenet_paths, obstacles, rpose, mapper):
+    measure_obst = obstacles_coordinates(obstacles,mapper)
+    if measure_obst!= []:
+        new_paths_idx = []
+        for i in range(len(frenet_paths)):
+            collision = check_collisions(frenet_paths[i], measure_obst)
+            if not collision:
+                continue
+            new_paths_idx.append(i) 
+        return [frenet_paths[i] for i in new_paths_idx]
+    else:
+        return frenet_paths
+
 def compute_ortogonal_vect(trajectory, s):
     ds = 1/30
     s1 = s + ds
@@ -38,19 +89,19 @@ def compute_ortogonal_vect(trajectory, s):
     t_r = np.arctan2(t_grad[1], t_grad[0])
     return np.array([-np.sin(t_r), np.cos(t_r)])
 
-def test_mapper_semantic_planner(*args, **kwargs):
+def test_mapper_semantic_planner_obstacles(*args, **kwargs):
     env = DuckietownEnv(seed=123,
-                        map_name='loop_empty',
+                        map_name='loop_obstacles',
                         camera_rand=False)
     
     # Planner 
-    planner = TrajectoryPlannerV1DT(TrajectoryPlannerParamsDT())
+    planner = TrajectoryPlannerV1DTObstacles(TrajectoryPlannerParamsDTObstacles())
     # transformer 
     transformer = FrenetDKTransform()
     # Controller
     controller = FrenetIOLController(.5, 0.0, 27, 0.0, 0.0)
     # Mapper
-    mapper = MapperSemantic()
+    mapper = MapperSemanticObstacles()
     # Env initialize
     env.reset()
     env.render()
@@ -96,6 +147,12 @@ def test_mapper_semantic_planner(*args, **kwargs):
             robot_fpose = transformer.transform(robot_p)
             # Get replanner step
             pos_s, pos_d = planner.replanner(time = i*dt)
+            paths_planner = planner.paths
+            paths_planner = frenet_to_glob_planner(planner, trajectory, paths_planner, est_pt)
+            # Check paths that do not encounter obstacles
+            planner.paths = check_paths(paths_planner, obstacles, robot_p, mapper)
+            planner.opt_path_tot = min(planner.paths, key=attrgetter('ctot'))
+            # Planner in mapper
             mapper.proj_planner = trajectory.compute_pt(est_pt)
             mapper.path_planner = frenet_to_glob(trajectory, planner, est_pt)
             #Compute error
@@ -111,8 +168,8 @@ def test_mapper_semantic_planner(*args, **kwargs):
         im3.set_data(mapper.plot_image_p)
         env.render()
         return [im1, im2, im3]
-    ani = animation.FuncAnimation(fig, animate, frames=800, interval=50, blit=True)
-    #ani.save("./prova_magic.mp4", writer="ffmpeg")
+    ani = animation.FuncAnimation(fig, animate, frames=500, interval=50, blit=True)
+    ani.save("./prova_magic_obs.mp4", writer="ffmpeg")
     plt.show()
     
 

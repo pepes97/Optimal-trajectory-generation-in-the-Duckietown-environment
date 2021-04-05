@@ -71,10 +71,6 @@ def _simulate_experiment(sim_config, data_storage, trajectory, robot, transforme
         robot_fddp  = transformer.transform(robot_ddp)[0:2]
 
         # Compute error and derror
-        # target_pos = trajectory.compute_pt(t_vect[i])
-        # target_fpos = transformer.transform(target_pos)
-        # target_dpos = trajectory.compute_first_derivative(t_vect[i])
-        # target_fdpos = transformer.transform(target_dpos)
         if i == 0:
             s0 = (robot_fpose[0],robot_fdp[0],robot_fddp[0])
             d0 = (robot_fpose[1],robot_fdp[1],robot_fddp[1])
@@ -86,7 +82,6 @@ def _simulate_experiment(sim_config, data_storage, trajectory, robot, transforme
         target_pos = transformer.itransform(np.array([pos_s[0], pos_d[0]]))
         target_fpos = np.array([pos_s[0], pos_d[0]])
         target_fdpos = np.array([pos_s[1], pos_d[1]])
-        #error = target_fpos - robot_fpose[0:2]
         error = -robot_fpose[:2]
         
         # Set error on s to 0 (TEST)

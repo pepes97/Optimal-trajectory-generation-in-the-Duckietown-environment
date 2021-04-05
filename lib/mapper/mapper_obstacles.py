@@ -13,7 +13,7 @@ OBJ_COLOR_DICT = {
     ObjectType.LEFT_LINE:  (122, 0, 174)    # violet
 }
 
-class MapperSemantic():
+class MapperSemanticObstacles():
     def __init__(self):
         self.projector       = PerspectiveWarper()
         self.yellow_filter   = CenterLineFilter()
@@ -28,12 +28,13 @@ class MapperSemantic():
         self.segment_dict    = {'white': None, 'yellow': None, 'red': None}
         self.semantic_mapper = SemanticMapper()
         self.obstacle_tracker = ObstacleTracker()
-        self.minimum_pixels = 2050
+        self.minimum_pixels = 1200
         self.max_line_offset = 250
         self.robust_factor = 1
         self.line_offset_mean = []
         self.plot_image_w = None
         self.plot_image_p = None 
+        self.max_planner = None
         self.trajectory_width = 0.21 #[m]
         self.white_tape = 0.048 #[m]
         self.yellow_tape = 0.024 #[m]
@@ -198,7 +199,6 @@ class MapperSemantic():
         if (np.count_nonzero(self.mask_dict["yellow"]) < self.minimum_pixels and np.count_nonzero(self.mask_dict["white"]) < self.minimum_pixels):
             pass
         else:
-            print(rwfit,lwfit)
             with warnings.catch_warnings(record=True) as w:
                 w = list(filter(lambda i: issubclass(i.category, np.RankWarning), w))
                 if len(w): 
