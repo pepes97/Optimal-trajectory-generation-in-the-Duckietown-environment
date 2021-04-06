@@ -14,19 +14,20 @@ logger = logging.getLogger(__name__)
 class TrajectoryPlannerDefaultParamsDTObstacles:
     kj = 0.001
     ks = 0.01
-    kd = 1.0
+    kd = 2.0
     kt = 0.01
     kdots = 1
     klong = 1
-    klat  = 1
-    delta_t = 1/30
-    desired_speed = 1.0
-    max_road_width = 0.5
-    min_t = 20/30
-    max_t = 1
-    d_road_width = 0.5
-    d_d_s = 1
-    low_speed_threshold = 2
+    klat  = 2
+    sampling_t = 0.1
+    delta_t = 0.5
+    desired_speed = 0.5
+    max_road_width = 0.4
+    min_t = 1
+    max_t = 2
+    d_road_width = 0.1
+    d_d_s = 0.5
+    low_speed_threshold = 0.2
     s_threshold = 1
     target_distance = 1
     num_sample = 2    
@@ -44,7 +45,7 @@ class TrajectoryPlannerParamsDTObstacles:
         self.kdots = tpdp.kdots # Cost term for velocity keeping (longitudinal trajectory)
         self.klat  = tpdp.klat # Cost term for lateral trajectory
         self.kt = tpdp.kt 
-        
+        self.sampling_t = tpdp.sampling_t
         self.delta_t = tpdp.delta_t # Sampling time interval
         self.desired_speed = tpdp.desired_speed # Desired speed
         self.max_road_width = tpdp.max_road_width    # Maximum road width
@@ -133,7 +134,7 @@ class TrajectoryPlannerV1DTObstacles(Planner):
                     ddst = dds0 + self.s_target.compute_dds(time) #- self.delta_t * self.s_target.compute_ddds(time)
                     # print(st,dst,ddst)
                     path_long = QuinticPolynomial(s0, ds0, dds0, st + si_dsi, dst, ddst, tj)
-                    ft.t = [t for t in np.arange(0, tj+self.delta_t, self.delta_t)]
+                    ft.t = [t for t in np.arange(0, tj+self.sampling_t, self.sampling_t)]
                     ft.s = [path_long.compute_pt(t) for t in ft.t]
                     ft.dot_s = [path_long.compute_first_derivative(t) for t in ft.t]
                     ft.ddot_s = [path_long.compute_second_derivative(t) for t in ft.t]
@@ -142,7 +143,7 @@ class TrajectoryPlannerV1DTObstacles(Planner):
                     C_long = ft.ct = self.kj * squared_jerklong + self.kt * tj + self.ks * (ft.s[-1] - st) ** 2 
                 else:
                     path_long = QuarticPolynomial(s0, ds0, dds0, si_dsi, 0.0, tj)
-                    ft.t = [t for t in np.arange(0, tj+self.delta_t, self.delta_t)]
+                    ft.t = [t for t in np.arange(0, tj+self.sampling_t, self.sampling_t)]
                     ft.s = [path_long.compute_pt(t) for t in ft.t]
                     ft.dot_s = [path_long.compute_first_derivative(t) for t in ft.t]
                     ft.ddot_s = [path_long.compute_second_derivative(t) for t in ft.t]
@@ -185,7 +186,7 @@ class TrajectoryPlannerV1DTObstacles(Planner):
             print(f'Warning: requested time {time} is out of optimal path time interval, reduce the query time')
             index = -1
         else:
-            index = round((time - opt_path.t[0])/self.delta_t)
+            index = round((time - opt_path.t[0])/self.sampling_t)
         if type_path == "s":
             return (opt_path.s[index], opt_path.dot_s[index], opt_path.ddot_s[index])
         else:

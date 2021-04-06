@@ -38,7 +38,7 @@ class MapperSemanticObstacles():
         self.trajectory_width = 0.21 #[m]
         self.white_tape = 0.048 #[m]
         self.yellow_tape = 0.024 #[m]
-        self.line_offset = 150 #[px]
+        self.line_offset = 77 #[px]
         self.pixel_ratio = (self.trajectory_width+ \
             self.yellow_tape/2+self.white_tape/2)/(self.line_offset*2) #[m/px] = 0.00082
         self.proj_planner = None
@@ -182,18 +182,14 @@ class MapperSemanticObstacles():
     def draw_path(self):
         if np.array(self.proj_planner!=None).all():
             proj = self.rob2cam(self.proj_planner[None])[0]
-            # cv2.circle(self.plot_image, tuple(proj), 10, (255, 0, 0), -1)
-            cv2.circle(self.plot_image_p, (320, 480), 10, (255, 0, 0), -1)
-            cv2.arrowedLine(self.plot_image_p, (320, 480), (proj[0], proj[1]), (255, 0, 0), 5) # distance to projection
+            robot_p = np.array([0.1,0.0])
+            rob = self.rob2cam(robot_p[None])[0]
+            cv2.circle(self.plot_image_p, (rob[0], rob[1]), 10, (255, 0, 0), -1)
+            cv2.arrowedLine(self.plot_image_p, (rob[0], rob[1]), (proj[0], proj[1]), (255, 0, 0), 5) # distance to projection
         if np.array(self.path_planner!=None).all():
-            # if (self.path_planner<3).all():
-            path = self.rob2cam(self.path_planner, int_type=False)
-            aa, bb, cc = np.polyfit(path[:,1], path[:,0], 2)
-            xxx = lambda y: int(aa*y**2 + bb*y + cc)
-            yyy = np.arange(0,480,20)
-            for y in yyy:
-                pts = np.array([xxx(y),y],np.int32)
-                cv2.circle(self.plot_image_p, tuple(pts), 5, (0, 0, 255), -1)
+            path = self.rob2cam(self.path_planner, int_type=True)
+            for p in path:
+                cv2.circle(self.plot_image_p, tuple(p), 5, (0, 0, 255), -1)
 
     def search(self, pfit, rwfit, lwfit, offset_y, offset_w):
         if (np.count_nonzero(self.mask_dict["yellow"]) < self.minimum_pixels and np.count_nonzero(self.mask_dict["white"]) < self.minimum_pixels):
@@ -224,7 +220,7 @@ class MapperSemanticObstacles():
                 offset = offset_y
             self.line_offset_mean.append(line_offset)
         line_offset = np.mean(self.line_offset_mean[-self.robust_factor:])
-        return line_fit, offset*line_offset
+        return line_fit, offset
 
     def process(self, frame):  
         self.plot_image_w, obstacles, object_dict,pfit,yellow_midpts,rwfit,lwfit,offset_y,offset_w = self.process_obstacles(frame)
@@ -238,7 +234,8 @@ class MapperSemanticObstacles():
         self.draw_obstacles_bbox(obstacles)
         # Line fit and offset
         line_fit, offset = self.search(pfit,rwfit,lwfit,offset_y,offset_w)
-        lane_offset = offset//2
+        # lane_offset = offset//2
+        lane_offset = offset*self.line_offset
         # Set true line found
         self.line_found = True  
         # Take the target

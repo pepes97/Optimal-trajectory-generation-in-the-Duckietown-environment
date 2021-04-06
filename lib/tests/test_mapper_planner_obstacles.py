@@ -63,7 +63,7 @@ def obstacles_coordinates(obstacles,mapper):
         obstacles_list.append(ob["center"])
 
     obstacles_list = np.array(obstacles_list)
-    if obstacles_list != []:
+    if obstacles_list.shape[0] > 0:
         obs_rob = mapper.cam2rob(obstacles_list)
         return obs_rob
     else:
@@ -99,7 +99,7 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
     # transformer 
     transformer = FrenetDKTransform()
     # Controller
-    controller = FrenetIOLController(.5, 0.0, 27, 0.0, 0.0)
+    controller = FrenetIOLController(.5, 0.0, 50, 0.0, 0.0)
     # Mapper
     mapper = MapperSemanticObstacles()
     # Env initialize
@@ -130,7 +130,7 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
     pos_d = d0 = (robot_fpose[1], 0.0, 0.0)
     # Planner initialize
     planner.initialize(t0=0, p0=d0, s0=s0)
-    dt = 1/60
+    dt = 1/30
 
     def animate(i):
         global u, robot_p, robot_dp, robot_ddp, pos_s, pos_d
@@ -148,6 +148,7 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
             # Get replanner step
             pos_s, pos_d = planner.replanner(time = i*dt)
             paths_planner = planner.paths
+            mapper.obst_acle = obstacles_coordinates(obstacles,mapper)
             paths_planner = frenet_to_glob_planner(planner, trajectory, paths_planner, est_pt)
             # Check paths that do not encounter obstacles
             planner.paths = check_paths(paths_planner, obstacles, robot_p, mapper)
@@ -162,14 +163,14 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
             curvature = trajectory.compute_curvature(est_pt)
             # Compute control
             u = controller.compute(robot_fpose, error, derror, curvature)  
-        
+
         im1.set_data(obs)
         im2.set_data(mapper.plot_image_w)
         im3.set_data(mapper.plot_image_p)
         env.render()
         return [im1, im2, im3]
-    ani = animation.FuncAnimation(fig, animate, frames=500, interval=50, blit=True)
-    ani.save("./prova_magic_obs.mp4", writer="ffmpeg")
+    ani = animation.FuncAnimation(fig, animate, frames=800, interval=50, blit=True)
+    # ani.save("./prova_magic_obs.mp4", writer="ffmpeg")
     plt.show()
     
 
