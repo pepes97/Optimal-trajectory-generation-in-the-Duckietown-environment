@@ -24,6 +24,8 @@ IMAGE_PATH_LST = [f'./images/dt_samples/{i}.jpg' for i in range(0, 170)]
 
 def frenet_to_glob_planner(planner, trajectory, frenet_paths, projection):
     for path in frenet_paths:
+        path.x=[]
+        path.y=[]
         for i in range(len(path.s)):
             s = projection + (path.s[i] - planner.s0[0])
             d = path.d[i] 
@@ -131,7 +133,7 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
     # Planner initialize
     planner.initialize(t0=0, p0=d0, s0=s0)
     dt = 1/30
-
+    switch = {'gate1':False,'gate2':False, 'tolerance':0}
     def animate(i):
         global u, robot_p, robot_dp, robot_ddp, pos_s, pos_d
         obs, reward, done, info = env.step(u)
@@ -145,17 +147,40 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
             est_pt = transformer.estimatePosition(trajectory,  robot_p)
             # Robot pose in frenet
             robot_fpose = transformer.transform(robot_p)
+            # Robot velocity in frenet (need only p_dot and d_dot)
+            robot_fdp  = transformer.transform(robot_dp)[0:2]
+            # Robot acceleration in frenet 
+            robot_fddp  = transformer.transform(robot_ddp)[0:2]
             # Get replanner step
             pos_s, pos_d = planner.replanner(time = i*dt)
             paths_planner = planner.paths
-            mapper.obst_acle = obstacles_coordinates(obstacles,mapper)
+            # mapper.obst_acle = obstacles_coordinates(obstacles,mapper)
             paths_planner = frenet_to_glob_planner(planner, trajectory, paths_planner, est_pt)
             # Check paths that do not encounter obstacles
-            planner.paths = check_paths(paths_planner, obstacles, robot_p, mapper)
-            planner.opt_path_tot = min(planner.paths, key=attrgetter('ctot'))
+            if obstacles!=[]:
+                switch['gate1'] = True
+                switch['tolerance'] += 1
+            else: 
+                switch['gate1'] = False
+                switch['tolerance'] = 0
+            # in case we see an obstacle replan immediately just once
+            # if after 30*1/30 = 1 second we still see an obstacle, replan again (some kind of tolerance)
+            if switch['gate1'] and (not switch['gate2'] or switch['tolerance']>30):
+                planner.p0 = (robot_fpose[1],pos_d[1],pos_d[2])
+                planner.s0 = (robot_fpose[0],pos_s[1],pos_s[2])
+                pos_s, pos_d = planner.replanner(time = i*dt, force = True)
+                paths_planner = planner.paths
+                paths_planner = frenet_to_glob_planner(planner, trajectory, paths_planner, est_pt)
+                planner.paths = check_paths(paths_planner, obstacles, robot_p, mapper)
+                planner.opt_path_tot = min(planner.paths, key=attrgetter('ctot'))
+                switch['gate2'] = True
+            elif not switch['gate1'] and switch['gate2']:
+                switch['gate2'] = False
+                switch['tolerance'] = 0
             # Planner in mapper
             mapper.proj_planner = trajectory.compute_pt(est_pt)
             mapper.path_planner = frenet_to_glob(trajectory, planner, est_pt)
+            mapper.all_paths = paths_planner
             #Compute error
             error = np.array([0, pos_d[0]]) - robot_fpose[0:2]
             derror = np.array([pos_s[1], pos_d[1]])
@@ -169,7 +194,7 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
         im3.set_data(mapper.plot_image_p)
         env.render()
         return [im1, im2, im3]
-    ani = animation.FuncAnimation(fig, animate, frames=800, interval=50, blit=True)
+    ani = animation.FuncAnimation(fig, animate, frames=200000, interval=50, blit=True)
     # ani.save("./prova_magic_obs.mp4", writer="ffmpeg")
     plt.show()
     

@@ -16,17 +16,17 @@ class TrajectoryPlannerDefaultParamsDTObstacles:
     ks = 0.01
     kd = 2.0
     kt = 0.01
-    kdots = 1
+    kdots = 2
     klong = 1
     klat  = 2
-    sampling_t = 0.1
+    sampling_t = 1/30
     delta_t = 0.5
     desired_speed = 0.5
-    max_road_width = 0.4
-    min_t = 1
+    max_road_width = 0.3
+    min_t = 1.5
     max_t = 2
     d_road_width = 0.1
-    d_d_s = 0.5
+    d_d_s = 0.2
     low_speed_threshold = 0.2
     s_threshold = 1
     target_distance = 1
@@ -218,7 +218,7 @@ class TrajectoryPlannerV1DTObstacles(Planner):
         self.opt_path_d = min(self.paths, key=attrgetter('cd'))
         self.opt_path_s = min(self.paths, key=attrgetter('cv'))
 
-    def replanner(self, time: float, dd: float = None, dsd: float = None, s_target: ObstacleTrajectory = None):
+    def replanner(self, time: float, dd: float = None, dsd: float = None, s_target: ObstacleTrajectory = None, force=False):
         # in order of priority
         if s_target != None: # follow
             self.s_target = s_target
@@ -227,7 +227,7 @@ class TrajectoryPlannerV1DTObstacles(Planner):
                 self.dd = dd
             if dsd != None: # velocity keeping
                 self.desired_speed = dsd
-        if time <= self.opt_path_tot.t[0] or time >= self.opt_path_tot.t[-2]:
+        if (time <= self.opt_path_tot.t[0] or time >= self.opt_path_tot.t[-2]) or force:
             self.replan_ctot(time=time)
         else:
             self.p0 = self.optimal_at_time(time, self.opt_path_tot, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)

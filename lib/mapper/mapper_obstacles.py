@@ -1,6 +1,8 @@
 from ..video import *
 from ..video import *
 
+COLORS_LIST_TUPLE = [tuple(np.random.randint(low = 0, high = 255, size=(3,)).tolist()) for i in range(500)]
+
 OBJ_COLOR_DICT = {
     ObjectType.UNKNOWN: (0, 128, 128),      # medium dark turquoise
     ObjectType.YELLOW_LINE: (255, 255, 0),  # yellow
@@ -17,7 +19,7 @@ class MapperSemanticObstacles():
     def __init__(self):
         self.projector       = PerspectiveWarper()
         self.yellow_filter   = CenterLineFilter()
-        self.yellow_filter.yellow_thresh = (19, 25)
+        self.yellow_filter.yellow_thresh = (10, 25)
         self.yellow_filter.s_thresh = (70, 180)
         self.yellow_filter.l_thresh = (10, 255)
         self.white_filter    = LateralLineFilter()
@@ -29,7 +31,6 @@ class MapperSemanticObstacles():
         self.semantic_mapper = SemanticMapper()
         self.obstacle_tracker = ObstacleTracker()
         self.minimum_pixels = 1200
-        self.max_line_offset = 250
         self.robust_factor = 1
         self.line_offset_mean = []
         self.plot_image_w = None
@@ -43,6 +44,7 @@ class MapperSemanticObstacles():
             self.yellow_tape/2+self.white_tape/2)/(self.line_offset*2) #[m/px] = 0.00082
         self.proj_planner = None
         self.path_planner = None
+        self.all_paths = None
         self.K2R = np.array([[0, -self.pixel_ratio, 480*self.pixel_ratio],
                             [-self.pixel_ratio, 0, 320*self.pixel_ratio],
                             [0, 0, 1]],dtype=np.float64)
@@ -190,6 +192,11 @@ class MapperSemanticObstacles():
             path = self.rob2cam(self.path_planner, int_type=True)
             for p in path:
                 cv2.circle(self.plot_image_p, tuple(p), 5, (0, 0, 255), -1)
+        if self.all_paths!=None:
+            for i,path in enumerate(self.all_paths):
+                points = self.rob2cam(np.c_[path.x,path.y], int_type=True)
+                for p in points:
+                    cv2.circle(self.plot_image_p, tuple(p), 2, COLORS_LIST_TUPLE[i], -1)
 
     def search(self, pfit, rwfit, lwfit, offset_y, offset_w):
         if (np.count_nonzero(self.mask_dict["yellow"]) < self.minimum_pixels and np.count_nonzero(self.mask_dict["white"]) < self.minimum_pixels):

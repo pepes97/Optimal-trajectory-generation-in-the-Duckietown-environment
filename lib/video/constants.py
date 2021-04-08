@@ -28,7 +28,7 @@ class DuckietownParameters:
     # Total robot width at wheel base, used for collision detection
     ROBOT_WIDTH = 0.13 + 0.02
     # Safety radius multiplier
-    SAFETY_RAD_MULT = 1#1.8
+    SAFETY_RAD_MULT = 1.8
     # Robot safety circle radius
     AGENT_SAFETY_RAD = (max(ROBOT_LENGTH, ROBOT_WIDTH) / 2) * SAFETY_RAD_MULT
     # Robot safety area
