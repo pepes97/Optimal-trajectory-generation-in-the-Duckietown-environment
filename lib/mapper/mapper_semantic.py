@@ -17,9 +17,9 @@ class MapperSemantic():
     def __init__(self):
         self.projector       = PerspectiveWarper()
         self.yellow_filter   = CenterLineFilter()
-        self.yellow_filter.yellow_thresh = (19, 25)
-        self.yellow_filter.s_thresh = (70, 180)
-        self.yellow_filter.l_thresh = (10, 255)
+        self.yellow_filter.yellow_thresh = (20, 35)
+        self.yellow_filter.s_thresh = (65, 190)
+        self.yellow_filter.l_thresh = (30, 255)
         self.white_filter    = LateralLineFilter()
         self.red_filter      = RedFilter()
         self.filter_dict     = {'white': self.white_filter, 'yellow': self.yellow_filter, 'red': self.red_filter}
@@ -28,7 +28,7 @@ class MapperSemantic():
         self.segment_dict    = {'white': None, 'yellow': None, 'red': None}
         self.semantic_mapper = SemanticMapper()
         self.obstacle_tracker = ObstacleTracker()
-        self.minimum_pixels = 2050
+        self.minimum_pixels = 2500
         self.max_line_offset = 250
         self.robust_factor = 1
         self.line_offset_mean = []
@@ -181,18 +181,14 @@ class MapperSemantic():
     def draw_path(self):
         if np.array(self.proj_planner!=None).all():
             proj = self.rob2cam(self.proj_planner[None])[0]
-            # cv2.circle(self.plot_image, tuple(proj), 10, (255, 0, 0), -1)
-            cv2.circle(self.plot_image_p, (320, 480), 10, (255, 0, 0), -1)
-            cv2.arrowedLine(self.plot_image_p, (320, 480), (proj[0], proj[1]), (255, 0, 0), 5) # distance to projection
+            robot_p = np.array([0.1,0.0])
+            rob = self.rob2cam(robot_p[None])[0]
+            cv2.circle(self.plot_image_p, (rob[0], rob[1]), 10, (255, 0, 0), -1)
+            cv2.arrowedLine(self.plot_image_p, (rob[0], rob[1]), (proj[0], proj[1]), (255, 0, 0), 5) # distance to projection
         if np.array(self.path_planner!=None).all():
-            # if (self.path_planner<3).all():
-            path = self.rob2cam(self.path_planner, int_type=False)
-            aa, bb, cc = np.polyfit(path[:,1], path[:,0], 2)
-            xxx = lambda y: int(aa*y**2 + bb*y + cc)
-            yyy = np.arange(0,480,20)
-            for y in yyy:
-                pts = np.array([xxx(y),y],np.int32)
-                cv2.circle(self.plot_image_p, tuple(pts), 5, (0, 0, 255), -1)
+            path = self.rob2cam(self.path_planner, int_type=True)
+            for p in path:
+                cv2.circle(self.plot_image_p, tuple(p), 5, (0, 0, 255), -1)
 
     def search(self, pfit, rwfit, lwfit, offset_y, offset_w):
         if (np.count_nonzero(self.mask_dict["yellow"]) < self.minimum_pixels and np.count_nonzero(self.mask_dict["white"]) < self.minimum_pixels):

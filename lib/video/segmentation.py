@@ -51,8 +51,8 @@ class Segmentator:
     This class is intended to be used along the SemanticMapper.
     """
     def __init__(self, *args, **kwargs):
-        self.segmentator_dict = {'white':  SegmentatorChannel(min_area=20),
-                                 'yellow': SegmentatorChannel(min_area=20),
+        self.segmentator_dict = {'white':  SegmentatorChannel(min_area=500),
+                                 'yellow': SegmentatorChannel(min_area=200),
                                  'red':    SegmentatorChannel()}
 
     def process(self, mask_dict):
