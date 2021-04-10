@@ -59,11 +59,20 @@ def check_collisions(path,obstacles):
             return False
     return True           
 
+
+def check_offroad(path,params,side):
+    h,k,a = params
+    distance = [(y - k) - a * pow((x - h),2) for x, y in zip(path.x, path.y)]
+    if side == 'right':
+        collision = any([di>0 if a>0 else di<0 for di in distance])
+    else:
+        collision = any([di<0 if a>0 else di>0 for di in distance])
+    return collision           
+
 def obstacles_coordinates(obstacles,mapper):
     obstacles_list = []
     for ob in obstacles:
         obstacles_list.append(ob["center"])
-
     obstacles_list = np.array(obstacles_list)
     if obstacles_list.shape[0] > 0:
         obs_rob = mapper.cam2rob(obstacles_list)
@@ -71,7 +80,16 @@ def obstacles_coordinates(obstacles,mapper):
     else:
         return []
 
-def check_paths(frenet_paths, obstacles, rpose, mapper):
+def get_vertex_and_focus_distance(fit: np.array):
+    a, b, c = fit
+    h = -b/(2*a)
+    # delta = (b**2-4*a*c)
+    k = -(b**2-4*a*c)/(4*a)
+    # d = (1-delta)/(4*a) - k
+    return h, k, a
+
+def check_paths(frenet_paths, obstacles, rpose, mapper, rwfit, lwfit):
+
     measure_obst = obstacles_coordinates(obstacles,mapper)
     if measure_obst!= []:
         new_paths_idx = []
@@ -79,6 +97,14 @@ def check_paths(frenet_paths, obstacles, rpose, mapper):
             collision = check_collisions(frenet_paths[i], measure_obst)
             if not collision:
                 continue
+            if np.array(rwfit!=None).all():
+                offroad = check_offroad(frenet_paths[i], get_vertex_and_focus_distance(rwfit),'right')
+                if offroad:
+                    continue
+            # if np.array(lwfit!=None).all():
+            #     offroad = check_offroad(frenet_paths[i], get_vertex_and_focus_distance(lwfit),'left')
+            #     if offroad:
+            #         continue
             new_paths_idx.append(i) 
         return [frenet_paths[i] for i in new_paths_idx]
     else:
@@ -92,9 +118,13 @@ def compute_ortogonal_vect(trajectory, s):
     return np.array([-np.sin(t_r), np.cos(t_r)])
 
 def test_mapper_semantic_planner_obstacles(*args, **kwargs):
-    env = DuckietownEnv(seed=123,
+    env = DuckietownEnv(seed=0,
                         map_name='loop_obstacles',
-                        camera_rand=False)
+                        camera_rand=False,
+                        frame_skip=1,
+                        domain_rand=False,
+                        dynamics_rand=False,
+                        distortion=False)
     
     # Planner 
     planner = TrajectoryPlannerV1DTObstacles(TrajectoryPlannerParamsDTObstacles())
@@ -118,7 +148,8 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
     robot_ddp = np.zeros(3)
     u = np.zeros(2)
     # Initialization
-    line_found, trajectory, obstacles = mapper.process(obs)
+    line_found, trajectory, obstacles, rwfit, lwfit = mapper.process(obs)
+
     est_pt = transformer.estimatePosition(trajectory, robot_p)
     # Plots
     fig, axs = plt.subplots(1, 3, figsize=(20, 5))
@@ -139,18 +170,14 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
         obs, reward, done, info = env.step(u)
         actual_u = np.array(info['Simulator']['action'])
         robot_p, robot_dp = robot.step(actual_u, dt)
-        line_found, trajectory, obstacles = mapper.process(obs)
+        line_found, trajectory, obstacles, rwfit, lwfit = mapper.process(obs)
 
         if line_found:
             # Estimate frenet frame
-            robot_p = np.array([0.1,0.0,0.0])
+            robot_p = np.array([0.05,0.0,0.0])
             est_pt = transformer.estimatePosition(trajectory,  robot_p)
             # Robot pose in frenet
             robot_fpose = transformer.transform(robot_p)
-            # Robot velocity in frenet (need only p_dot and d_dot)
-            robot_fdp  = transformer.transform(robot_dp)[0:2]
-            # Robot acceleration in frenet 
-            robot_fddp  = transformer.transform(robot_ddp)[0:2]
             # Get replanner step
             pos_s, pos_d = planner.replanner(time = i*dt)
             paths_planner = planner.paths
@@ -165,13 +192,13 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
                 switch['tolerance'] = 0
             # in case we see an obstacle replan immediately just once
             # if after 30*1/30 = 1 second we still see an obstacle, replan again (some kind of tolerance)
-            if switch['gate1'] and (not switch['gate2'] or switch['tolerance']>30):
-                planner.p0 = (robot_fpose[1],pos_d[1],pos_d[2])
-                planner.s0 = (robot_fpose[0],pos_s[1],pos_s[2])
+            if switch['gate1'] and (not switch['gate2'] or switch['tolerance']>60):
+                # planner.p0 = (robot_fpose[1],pos_d[1],pos_d[2])
+                # planner.s0 = (robot_fpose[0],pos_s[1],pos_s[2])
                 pos_s, pos_d = planner.replanner(time = i*dt, force = True)
                 paths_planner = planner.paths
                 paths_planner = frenet_to_glob_planner(planner, trajectory, paths_planner, est_pt)
-                planner.paths = check_paths(paths_planner, obstacles, robot_p, mapper)
+                planner.paths = check_paths(paths_planner, obstacles, robot_p, mapper, rwfit, lwfit)
                 planner.opt_path_tot = min(planner.paths, key=attrgetter('ctot'))
                 switch['gate2'] = True
             elif not switch['gate1'] and switch['gate2']:
@@ -194,7 +221,7 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
         im3.set_data(mapper.plot_image_p)
         env.render()
         return [im1, im2, im3]
-    ani = animation.FuncAnimation(fig, animate, frames=200000, interval=50, blit=True)
+    ani = animation.FuncAnimation(fig, animate, frames=20000, interval=50, blit=True)
     # ani.save("./prova_magic_obs.mp4", writer="ffmpeg")
     plt.show()
     

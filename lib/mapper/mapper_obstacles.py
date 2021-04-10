@@ -19,9 +19,9 @@ class MapperSemanticObstacles():
     def __init__(self):
         self.projector       = PerspectiveWarper()
         self.yellow_filter   = CenterLineFilter()
-        self.yellow_filter.yellow_thresh = (10, 25)
-        self.yellow_filter.s_thresh = (70, 180)
-        self.yellow_filter.l_thresh = (10, 255)
+        self.yellow_filter.yellow_thresh = (20, 35)
+        self.yellow_filter.s_thresh = (65, 190)
+        self.yellow_filter.l_thresh = (30, 255)
         self.white_filter    = LateralLineFilter()
         self.red_filter      = RedFilter()
         self.filter_dict     = {'white': self.white_filter, 'yellow': self.yellow_filter, 'red': self.red_filter}
@@ -184,7 +184,7 @@ class MapperSemanticObstacles():
     def draw_path(self):
         if np.array(self.proj_planner!=None).all():
             proj = self.rob2cam(self.proj_planner[None])[0]
-            robot_p = np.array([0.1,0.0])
+            robot_p = np.array([0.05,0.0])
             rob = self.rob2cam(robot_p[None])[0]
             cv2.circle(self.plot_image_p, (rob[0], rob[1]), 10, (255, 0, 0), -1)
             cv2.arrowedLine(self.plot_image_p, (rob[0], rob[1]), (proj[0], proj[1]), (255, 0, 0), 5) # distance to projection
@@ -229,6 +229,21 @@ class MapperSemanticObstacles():
         line_offset = np.mean(self.line_offset_mean[-self.robust_factor:])
         return line_fit, offset
 
+    def polyfit_cam2rob(self, line_fit):
+        a, b, c = line_fit
+        target = []
+        xx = lambda y: int(a*y**2 + b*y + c)
+        yy = np.arange(0,480,20)
+        for i in range(yy.shape[0]-1):
+            point_on_line = np.array([xx(yy[i]),yy[i]],np.int32)
+            cv2.circle(self.plot_image_p, tuple(point_on_line), 10, (255, 0, 0), -1)
+            target.append(point_on_line)
+        target = np.stack(target)
+        target = self.cam2rob(target)
+        # sample again to get the full trajectory
+        line_fit = np.polyfit(target[:,0], target[:,1], 2)
+        return line_fit
+
     def process(self, frame):  
         self.plot_image_w, obstacles, object_dict,pfit,yellow_midpts,rwfit,lwfit,offset_y,offset_w = self.process_obstacles(frame)
         # Mask Generation for obstacles
@@ -251,6 +266,12 @@ class MapperSemanticObstacles():
         trajectory = self.build_trajectory(target)
         # Draw path
         self.draw_path()
-        return self.line_found,trajectory, obstacles
+        
+        # TO BE REMOVED
+        if np.array(rwfit!=None).all():
+            rwfit = self.polyfit_cam2rob(rwfit)
+        if np.array(lwfit!=None).all():
+            lwfit = self.polyfit_cam2rob(lwfit)
+        return self.line_found, trajectory, obstacles, rwfit, lwfit
 
     

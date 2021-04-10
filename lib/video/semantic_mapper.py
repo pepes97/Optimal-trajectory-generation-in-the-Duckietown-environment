@@ -86,7 +86,7 @@ class SemanticMapper:
             area = fdict['area']
             center = fdict['center']
             eigratio = fdict['eigs'][0] / fdict['eigs'][1]
-            if area >= 800:
+            if area >= 2000:
                 fdict['class'] = ObjectType.DUCK
             elif eigratio > 23. or area < 100 or eigratio < 2.:
                 fdict['class'] = ObjectType.UNKNOWN
@@ -101,7 +101,7 @@ class SemanticMapper:
             eigratio = fdict['eigs'][0] / fdict['eigs'][1]
             area = fdict['area']
             center = fdict['center']
-            if eigratio >= 100. and eigratio <= 500. or fdict['area'] > 5000.:
+            if eigratio >= 100. and eigratio <= 500. and fdict['area'] > 2000.:
                 fdict['class'] = ObjectType.WHITE_LINE
             else:
                 fdict['class'] = ObjectType.UNKNOWN
@@ -224,6 +224,16 @@ class SemanticMapper:
             self.last_white_fit = l_fit
             self.right = False
             offset_w = 2
+            
+        if len(object_dict[ObjectType.LEFT_LINE]) == 1: 
+            obj = object_dict[ObjectType.LEFT_LINE][0]
+            l_mask_white =cv2.drawContours(mask_cont, obj["contour"], -1, (255, 255, 255),
+                                         thickness=cv2.FILLED)
+            xy = linspace()
+            l_points = xy[l_mask_white[...,1]>0]
+            lx_points = l_points[:,0]
+            ly_points = l_points[:,1]
+            l_fit = np.polyfit(ly_points, lx_points, 2)
 
         else:  
             if self.right:

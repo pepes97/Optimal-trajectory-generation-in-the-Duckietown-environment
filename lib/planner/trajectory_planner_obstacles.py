@@ -22,7 +22,7 @@ class TrajectoryPlannerDefaultParamsDTObstacles:
     sampling_t = 1/30
     delta_t = 0.5
     desired_speed = 0.5
-    max_road_width = 0.3
+    max_road_width = 0.2
     min_t = 1.5
     max_t = 2
     d_road_width = 0.1
@@ -89,7 +89,7 @@ class TrajectoryPlannerV1DTObstacles(Planner):
         self.dd = dd
         self.t_initial = t0
         self.d_target = 2.
-        self.di_interval = (-self.max_road_width,self.max_road_width,self.d_road_width) # Interval expressed as tuple (D_min, D_max, delta_d)
+        self.di_interval = (-self.max_road_width,self.max_road_width+self.d_road_width,self.d_road_width) # Interval expressed as tuple (D_min, D_max, delta_d)
         self.t_interval = (self.min_t,self.max_t+self.delta_t,self.delta_t) # Interval expressed as tuple (T_min, T_max, delta_t)
         self.si_interval = (round(-self.d_d_s*self.num_sample),round(+self.d_d_s*self.num_sample+self.d_d_s),self.d_d_s)
         self.dsi_interval = (round(self.s0[1]-self.d_d_s*self.num_sample),round(self.s0[1]+self.d_d_s*self.num_sample+self.d_d_s),self.d_d_s) # Interval expressed as tuple (dsd - delta_dsi, dsd + delta_dsi, delta_s)
@@ -116,7 +116,6 @@ class TrajectoryPlannerV1DTObstacles(Planner):
 
         self.si_interval = (round(-self.d_d_s*self.num_sample),round(+self.d_d_s*self.num_sample+self.d_d_s),self.d_d_s)
         self.dsi_interval = (round(ds0-self.d_d_s*self.num_sample),round(ds0+self.d_d_s*self.num_sample+self.d_d_s),self.d_d_s) # Interval expressed as tuple (dsd - delta_dsi, dsd + delta_dsi, delta_s)
-        #self.dsi_interval = (round(ds0), round(ds0+self.d_d_s*self.num_sample), self.d_d_s)
  
         if self.s_target != None:
             long_interval = np.arange(self.si_interval[0], self.si_interval[1], self.si_interval[2])
