@@ -1,0 +1,9 @@
+matplotlib==3.3.3
+jsonpickle==2.0.0
+opencv-python==4.5.1.48
+gym==0.18.0
+zuper-commons-z6==6.1.7
+duckietown-world-daffy==6.2.7
+typing_extensions==3.7.4.3
+carnivalmirror==0.6.2
+pyzmq==21.0.1

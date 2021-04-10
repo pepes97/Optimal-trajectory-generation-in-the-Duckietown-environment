@@ -39,9 +39,13 @@ def compute_ortogonal_vect(trajectory, s):
     return np.array([-np.sin(t_r), np.cos(t_r)])
 
 def test_mapper_semantic_planner(*args, **kwargs):
-    env = DuckietownEnv(seed=123,
+    env = DuckietownEnv(seed=0,
                         map_name='loop_empty',
-                        camera_rand=False)
+                        domain_rand=False,
+                        frame_skip=1,
+                        distortion=False,
+                        camera_rand=False,
+                        dynamics_rand=False)
     
     # Planner 
     planner = TrajectoryPlannerV1DT(TrajectoryPlannerParamsDT())
@@ -79,7 +83,7 @@ def test_mapper_semantic_planner(*args, **kwargs):
     pos_d = d0 = (robot_fpose[1], 0.0, 0.0)
     # Planner initialize
     planner.initialize(t0=0, p0=d0, s0=s0)
-    dt = 1/60
+    dt = 1/30
 
     def animate(i):
         global u, robot_p, robot_dp, robot_ddp, pos_s, pos_d
@@ -90,7 +94,7 @@ def test_mapper_semantic_planner(*args, **kwargs):
 
         if line_found:
             # Estimate frenet frame
-            robot_p = np.array([0.1,0.0,0.0])
+            robot_p = np.array([0.07,0.0,0.0])
             est_pt = transformer.estimatePosition(trajectory,  robot_p)
             # Robot pose in frenet
             robot_fpose = transformer.transform(robot_p)
@@ -111,8 +115,9 @@ def test_mapper_semantic_planner(*args, **kwargs):
         im3.set_data(mapper.plot_image_p)
         env.render()
         return [im1, im2, im3]
-    ani = animation.FuncAnimation(fig, animate, frames=800, interval=50, blit=True)
-    #ani.save("./prova_magic.mp4", writer="ffmpeg")
+    ani = animation.FuncAnimation(fig, animate, frames=1200, interval=50, blit=True)
+    #ani.save("./images/duckietown_video/planner_without_obstacles_2.mp4", writer="ffmpeg")
+    #ani.save("./images/duckietown_video/planner_without_obstacles.gif")
     plt.show()
     
 

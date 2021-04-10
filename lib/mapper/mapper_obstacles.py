@@ -39,7 +39,7 @@ class MapperSemanticObstacles():
         self.trajectory_width = 0.21 #[m]
         self.white_tape = 0.048 #[m]
         self.yellow_tape = 0.024 #[m]
-        self.line_offset = 77 #[px]
+        self.line_offset = 60 #[px]
         self.pixel_ratio = (self.trajectory_width+ \
             self.yellow_tape/2+self.white_tape/2)/(self.line_offset*2) #[m/px] = 0.00082
         self.proj_planner = None
@@ -181,22 +181,24 @@ class MapperSemanticObstacles():
         trajectory.compute_curvature = lambda x: compute_curvature(trajectory, x)
         return trajectory
 
-    def draw_path(self):
-        if np.array(self.proj_planner!=None).all():
-            proj = self.rob2cam(self.proj_planner[None])[0]
-            robot_p = np.array([0.05,0.0])
-            rob = self.rob2cam(robot_p[None])[0]
-            cv2.circle(self.plot_image_p, (rob[0], rob[1]), 10, (255, 0, 0), -1)
-            cv2.arrowedLine(self.plot_image_p, (rob[0], rob[1]), (proj[0], proj[1]), (255, 0, 0), 5) # distance to projection
-        if np.array(self.path_planner!=None).all():
-            path = self.rob2cam(self.path_planner, int_type=True)
-            for p in path:
-                cv2.circle(self.plot_image_p, tuple(p), 5, (0, 0, 255), -1)
-        if self.all_paths!=None:
+    def draw_path(self, verbose = 0):
+        if self.all_paths!=None and verbose:
             for i,path in enumerate(self.all_paths):
                 points = self.rob2cam(np.c_[path.x,path.y], int_type=True)
                 for p in points:
                     cv2.circle(self.plot_image_p, tuple(p), 2, COLORS_LIST_TUPLE[i], -1)
+        if np.array(self.path_planner!=None).all():
+            path = self.rob2cam(self.path_planner, int_type=True)
+            for p in path:
+                cv2.circle(self.plot_image_p, tuple(p), 5, (0, 0, 255), -1)
+        if np.array(self.proj_planner!=None).all():
+            proj = self.rob2cam(self.proj_planner[None])[0]
+            robot_p = np.array([0.1,0.0])
+            rob = self.rob2cam(robot_p[None])[0]
+            cv2.circle(self.plot_image_p, (rob[0], rob[1]), 10, (255, 0, 0), -1)
+            cv2.arrowedLine(self.plot_image_p, (rob[0], rob[1]), (proj[0], proj[1]), (255, 0, 0), 5) # distance to projection
+        
+        
 
     def search(self, pfit, rwfit, lwfit, offset_y, offset_w):
         if (np.count_nonzero(self.mask_dict["yellow"]) < self.minimum_pixels and np.count_nonzero(self.mask_dict["white"]) < self.minimum_pixels):
@@ -229,22 +231,31 @@ class MapperSemanticObstacles():
         line_offset = np.mean(self.line_offset_mean[-self.robust_factor:])
         return line_fit, offset
 
-    def polyfit_cam2rob(self, line_fit):
-        a, b, c = line_fit
-        target = []
-        xx = lambda y: int(a*y**2 + b*y + c)
-        yy = np.arange(0,480,20)
-        for i in range(yy.shape[0]-1):
-            point_on_line = np.array([xx(yy[i]),yy[i]],np.int32)
-            cv2.circle(self.plot_image_p, tuple(point_on_line), 10, (255, 0, 0), -1)
-            target.append(point_on_line)
-        target = np.stack(target)
-        target = self.cam2rob(target)
-        # sample again to get the full trajectory
-        line_fit = np.polyfit(target[:,0], target[:,1], 2)
-        return line_fit
+    def lateal_polyfit_cam2rob(self, trajectory, verbose = 0):
+        rw = []
+        lw = []
+        offset_r = self.line_offset*self.pixel_ratio
+        offset_l = -3*self.line_offset*self.pixel_ratio
+        for i in np.arange(0.0,480*self.pixel_ratio,0.05):
+            target_pos = trajectory.compute_pt(i) + \
+                compute_ortogonal_vect(trajectory, i) * offset_r
+            rw.append(target_pos)
+            target_pos = trajectory.compute_pt(i) + \
+                compute_ortogonal_vect(trajectory, i) * offset_l
+            lw.append(target_pos)
+        rw = np.array(rw)
+        lw = np.array(lw)
+        if verbose:
+            rww = self.rob2cam(rw)
+            lww = self.rob2cam(lw)
+            for rp,lp in zip(rww,lww):
+                cv2.circle(self.plot_image_p, tuple(rp), 5, (0, 0, 255), -1)
+                cv2.circle(self.plot_image_p, tuple(lp), 5, (0, 0, 255), -1)
+        rw = np.polyfit(rw[:,0],rw[:,1],2)
+        lw = np.polyfit(lw[:,0],lw[:,1],2)
+        return rw,lw
 
-    def process(self, frame):  
+    def process(self, frame, verbose = 0):  
         self.plot_image_w, obstacles, object_dict,pfit,yellow_midpts,rwfit,lwfit,offset_y,offset_w = self.process_obstacles(frame)
         # Mask Generation for obstacles
         self.plot_image_w = self.obstacle_mask_generation(obstacles)
@@ -265,13 +276,9 @@ class MapperSemanticObstacles():
         # Compute trajectory
         trajectory = self.build_trajectory(target)
         # Draw path
-        self.draw_path()
-        
-        # TO BE REMOVED
-        if np.array(rwfit!=None).all():
-            rwfit = self.polyfit_cam2rob(rwfit)
-        if np.array(lwfit!=None).all():
-            lwfit = self.polyfit_cam2rob(lwfit)
-        return self.line_found, trajectory, obstacles, rwfit, lwfit
+        self.draw_path(verbose = verbose)        
+        rw, lw = self.lateal_polyfit_cam2rob(trajectory,verbose = verbose)
+
+        return self.line_found, trajectory, obstacles, rwfit, lwfit, rw, lw
 
     

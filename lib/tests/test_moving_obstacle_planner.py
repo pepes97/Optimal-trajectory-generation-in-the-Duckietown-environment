@@ -6,7 +6,7 @@ from .config import DefaultSimulationParameters as dsp
 
 from ..logger import SimulationDataStorage, SimData, timeprofiledecorator
 from ..trajectory import QuinticTrajectory2D, CircleTrajectory2D, SplineTrajectory2D
-from ..transform import FrenetGNTransform
+from ..transform import FrenetGNTransformOld
 from ..controller import FrenetIOLController
 from ..plotter import *
 from ..sensor import StaticObstacle, ProximitySensor, MovingObstacle
@@ -172,10 +172,12 @@ def test_planner_moving_obstacle(*args, **kwargs):
 
     def __plot_fn(store: str=None):
         fig, ani = plot_2d_planner_moving_obstacles_anim(data_storage, trajectory,robot, sensor, obstacle_lst, t_vect)
+        #ani.save("./images/animated/planner_moving_obstacles.gif")
         if store is not None:
             # TODO (generate path inside images/<timeoftheday>/store:str)
             ani.save(store)
             #ani.save(store, writer="ffmpeg")
+        plt.show()
     if plot_flag:
         __plot_fn(store_plot)
     return data_storage

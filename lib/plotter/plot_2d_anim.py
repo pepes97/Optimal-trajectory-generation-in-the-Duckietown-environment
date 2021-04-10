@@ -146,7 +146,6 @@ def plot_2d_planner_obstacles_anim(data_storage:SimulationDataStorage, trajector
         planner_line.set_ydata(planner_path[1, i:i+30])
         return [unicycle_poly, planner_line,sensor_line, measure_scat]
     ani = animation.FuncAnimation(fig, animate, frames=t_vect.shape[0], interval=30, blit=False)
-    plt.show()
     return fig, ani
 
 def plot_2d_planner_moving_obstacles_anim(data_storage, trajectory,robot, sensor, obstacle_lst, t_vect):
@@ -199,5 +198,5 @@ def plot_2d_planner_moving_obstacles_anim(data_storage, trajectory,robot, sensor
         planner_line.set_ydata(planner_path[1, i:i+30])
         return [unicycle_poly, planner_line,sensor_line, measure_scat, obstacles_poly]
     ani = animation.FuncAnimation(fig, animate, frames=t_vect.shape[0], interval=30, blit=False)
-    plt.show()
+    
     return fig, ani

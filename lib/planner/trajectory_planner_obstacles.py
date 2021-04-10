@@ -16,15 +16,15 @@ class TrajectoryPlannerDefaultParamsDTObstacles:
     ks = 0.01
     kd = 2.0
     kt = 0.01
-    kdots = 2
+    kdots = 1
     klong = 1
     klat  = 2
-    sampling_t = 1/30
+    sampling_t = 0.05
     delta_t = 0.5
     desired_speed = 0.5
     max_road_width = 0.2
-    min_t = 1.5
-    max_t = 2
+    min_t = 2
+    max_t = 3
     d_road_width = 0.1
     d_d_s = 0.2
     low_speed_threshold = 0.2
@@ -172,6 +172,15 @@ class TrajectoryPlannerV1DTObstacles(Planner):
                         C_lat = f.cd = self.kj * squared_jerk + self.kt * tj + self.kd * (di-self.dd) ** 2 # Compute longitudinal cost
                         f.ctot = self.klat * C_lat + self.klong * C_long
                         # Transform f.t into real time coordinates
+                    # f.t += [t for t in np.arange(tj+self.sampling_t, self.t_interval[1], self.sampling_t)]
+                    # f.s += [f.s[-1] for t in np.arange(tj+self.sampling_t, self.t_interval[1], self.sampling_t)]
+                    # f.dot_s += [f.dot_s[-1] for t in np.arange(tj+self.sampling_t, self.t_interval[1], self.sampling_t)]
+                    # f.ddot_s += [f.ddot_s[-1] for t in np.arange(tj+self.sampling_t, self.t_interval[1], self.sampling_t)]
+                    # f.dddot_s += [f.dddot_s[-1] for t in np.arange(tj+self.sampling_t, self.t_interval[1], self.sampling_t)]
+                    # f.d += [f.d[-1] for t in np.arange(tj+self.sampling_t, self.t_interval[1], self.sampling_t)]
+                    # f.dot_d += [f.dot_d[-1] for t in np.arange(tj+self.sampling_t, self.t_interval[1], self.sampling_t)]
+                    # f.ddot_d += [f.ddot_d[-1] for t in np.arange(tj+self.sampling_t, self.t_interval[1], self.sampling_t)]
+                    # f.dddot_d += [f.dddot_d[-1] for t in np.arange(tj+self.sampling_t, self.t_interval[1], self.sampling_t)]
                     for i in range(len(f.t)):
                         f.t[i] += self.t_initial
                     frenet_paths.append(f)
@@ -226,7 +235,7 @@ class TrajectoryPlannerV1DTObstacles(Planner):
                 self.dd = dd
             if dsd != None: # velocity keeping
                 self.desired_speed = dsd
-        if (time <= self.opt_path_tot.t[0] or time >= self.opt_path_tot.t[-2]) or force:
+        if (time <= self.opt_path_tot.t[0] or time >= self.opt_path_tot.t[-10]) or force:
             self.replan_ctot(time=time)
         else:
             self.p0 = self.optimal_at_time(time, self.opt_path_tot, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)
