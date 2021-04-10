@@ -71,7 +71,7 @@ We analyzed two scenarios: environment without obstacles and with obstacles.
 The Duckietown environment is `loop_empty`.
 
 ```
-python tester.py -t dt_semantic_mapper
+python tester.py -t dt_mapper_semantic
 ```
 
 ![](./images/duckietown_video/planner-without-obstacles-2.gif)
