@@ -41,7 +41,8 @@ TEST_MAP = {
     'dt_ekf_slam': test_duckietown_ekf_slam, 
     'dt_mapper':test_mapper_planner,
     'dt_mapper_semantic':test_mapper_semantic_planner, 
-    'dt_obstacles': test_mapper_semantic_planner_obstacles
+    'dt_obstacles': test_mapper_semantic_planner_obstacles, 
+    'plot_optimal': test_optimal_frenet
 }
 
 def handle_parser(args):
@@ -70,6 +71,9 @@ if __name__ == '__main__':
     parser.add_argument('--print', '-p', help='Print flag', action='store_true')
     parser.add_argument('--save-plot', help='Path and extension of the plot image', type=str)
     parser.add_argument('--config', '-c', type=str, help='Simulation configuration file')
+    parser.add_argument('--stop', '-st', help='Store flag', action='store_true')
+    parser.add_argument('--merge', '-m', help='Merge flag', action='store_true')
+    parser.add_argument('--follow', '-f', help='Follow flag', action='store_true')
     try:
         args = parser.parse_args()
     except:
@@ -92,9 +96,17 @@ if __name__ == '__main__':
     print(f'{bcolors.OKGREEN}Launching test for {args.test}{bcolors.ENDC}')
     config_args = config_obj.__dict__ if config_obj is not None else None
     if config_args is None:
-        result = TEST_MAP[args.test](plot=args.print, store_plot=args.save_plot)
+        if args.stop:
+            result = TEST_MAP[args.test](plot=args.print, store_plot=args.save_plot, stop=args.stop)
+        elif args.merge:
+            result = TEST_MAP[args.test](plot=args.print, store_plot=args.save_plot, merge=args.merge)
+        elif args.follow:
+            result = TEST_MAP[args.test](plot=args.print, store_plot=args.save_plot, follow=args.follow)
+        else:
+            result = TEST_MAP[args.test](plot=args.print, store_plot=args.save_plot)
     else:
         result = TEST_MAP[args.test](**config_args, plot=args.print, store_plot=args.save_plot)
+    
     if result is not None:
         # Process results
         # Store results

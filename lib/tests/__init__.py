@@ -23,3 +23,4 @@ from .test_dt_ekf_slam import test_duckietown_ekf_slam
 from .mapper_planner import test_mapper_planner
 from .test_mapper_semantic import test_mapper_semantic_planner
 from .test_mapper_planner_obstacles import test_mapper_semantic_planner_obstacles
+from .test_optimal_frenet import test_optimal_frenet
