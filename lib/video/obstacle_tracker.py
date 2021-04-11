@@ -215,6 +215,8 @@ class ObstacleTracker:
             object['bbox'] = (x, y, w, h)
             object['end_point'] = np.array([x + w/2, y+h])
             object['end_right'] = np.array([x, y+h])
+            object['end_lat'] = np.array([x, y+h/2])
+            object['end_top'] = np.array([x, y])
             object['distance'] = distance_vect
             object['radius'] = radius
             # TODO
