@@ -78,7 +78,13 @@ python tester.py -t dt_mapper_semantic
 
 **Run with obstacles**
 
-Coming soon
+The Duckietown environment is `loop_obstacles`.
+
+```
+python tester.py -t dt_obstacles
+```
+
+![](./images/duckietown_video/planner_with_obstacles_1.gif)
 
 ## Credits
 
