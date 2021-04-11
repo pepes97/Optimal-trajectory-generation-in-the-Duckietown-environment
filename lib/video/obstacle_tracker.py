@@ -213,6 +213,8 @@ class ObstacleTracker:
             x, y, w, h = cv2.boundingRect(object['contour']) # Bounding box
             distance_vect, radius = computeDistanceRad(x, y, w, h)
             object['bbox'] = (x, y, w, h)
+            object['end_point'] = np.array([x + w/2, y+h])
+            object['end_right'] = np.array([x, y+h])
             object['distance'] = distance_vect
             object['radius'] = radius
             # TODO

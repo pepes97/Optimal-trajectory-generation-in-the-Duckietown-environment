@@ -30,7 +30,7 @@ class MapperSemanticObstacles():
         self.segment_dict    = {'white': None, 'yellow': None, 'red': None}
         self.semantic_mapper = SemanticMapper()
         self.obstacle_tracker = ObstacleTracker()
-        self.minimum_pixels = 1200
+        self.minimum_pixels = 1500
         self.robust_factor = 1
         self.line_offset_mean = []
         self.plot_image_w = None
@@ -112,6 +112,7 @@ class MapperSemanticObstacles():
             # Draw distance line
             cv2.rectangle(self.plot_image_p, (x, y), (x+w, y+h), (255, 255, 0), 2)
             cv2.arrowedLine(self.plot_image_p, (320, 480), (int(x+w/2), int(y+h)), (255, 0, 0), 3)
+            cv2.arrowedLine(self.plot_image_p, (320, 480), (int(x), int(y+h)), (0, 0, 255), 3)
 
     def cam2rob(self, camera_points: np.ndarray) -> np.ndarray: 
         # homogeneous vector
@@ -200,7 +201,7 @@ class MapperSemanticObstacles():
         
         
 
-    def search(self, pfit, rwfit, lwfit, offset_y, offset_w):
+    def search(self, pfit, rwfit, lwfit, offset_y, offset_w, yellow_midpts):
         if (np.count_nonzero(self.mask_dict["yellow"]) < self.minimum_pixels and np.count_nonzero(self.mask_dict["white"]) < self.minimum_pixels):
             pass
         else:
@@ -225,8 +226,13 @@ class MapperSemanticObstacles():
                     line_fit = lwfit
                 offset = offset_w
             else:
-                line_fit = pfit
-                offset = offset_y
+                print(yellow_midpts)
+                if yellow_midpts is None and rwfit is not None:
+                    line_fit = rwfit
+                    offset = offset_w
+                else:
+                    line_fit = pfit
+                    offset = offset_y
             self.line_offset_mean.append(line_offset)
         line_offset = np.mean(self.line_offset_mean[-self.robust_factor:])
         return line_fit, offset
@@ -234,7 +240,7 @@ class MapperSemanticObstacles():
     def lateal_polyfit_cam2rob(self, trajectory, verbose = 0):
         rw = []
         lw = []
-        offset_r = self.line_offset*self.pixel_ratio
+        offset_r = self.line_offset//4*self.pixel_ratio
         offset_l = -3*self.line_offset*self.pixel_ratio
         for i in np.arange(0.0,480*self.pixel_ratio,0.05):
             target_pos = trajectory.compute_pt(i) + \
@@ -266,7 +272,7 @@ class MapperSemanticObstacles():
         # Draw bbox obstacles
         self.draw_obstacles_bbox(obstacles)
         # Line fit and offset
-        line_fit, offset = self.search(pfit,rwfit,lwfit,offset_y,offset_w)
+        line_fit, offset = self.search(pfit,rwfit,lwfit,offset_y,offset_w, yellow_midpts)
         # lane_offset = offset//2
         lane_offset = offset*self.line_offset
         # Set true line found

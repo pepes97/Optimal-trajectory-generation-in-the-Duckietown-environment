@@ -57,8 +57,7 @@ def check_collisions(path,obstacles):
         collision = any([di <= (dp.AGENT_SAFETY_RAD)**2 for di in distance])
         if collision:
             return False
-    return True           
-
+    return True               
 
 def check_offroad(path,params,side):
     h,k,a = params
@@ -71,14 +70,23 @@ def check_offroad(path,params,side):
 
 def obstacles_coordinates(obstacles,mapper):
     obstacles_list = []
+    obstacles_list_c = []
+    obstacles_list_r = []
     for ob in obstacles:
-        obstacles_list.append(ob["center"])
+        obstacles_list.append(ob["end_point"])
+        obstacles_list_c.append(ob["center"])
+        obstacles_list_r.append(ob["end_right"])
     obstacles_list = np.array(obstacles_list)
+    obstacles_list_c = np.array(obstacles_list_c)
+    obstacles_list_r = np.array(obstacles_list_r)
+
     if obstacles_list.shape[0] > 0:
         obs_rob = mapper.cam2rob(obstacles_list)
-        return obs_rob
+        obs_rob_c = mapper.cam2rob(obstacles_list_c)
+        obs_rob_r = mapper.cam2rob(obstacles_list_r)
+        return obs_rob,obs_rob_c, obs_rob_r
     else:
-        return []
+        return [], [],[]
 
 def get_vertex_and_focus_distance(fit: np.array):
     a, b, c = fit
@@ -88,7 +96,7 @@ def get_vertex_and_focus_distance(fit: np.array):
 
 def check_paths(frenet_paths, obstacles, rpose, mapper, rwfit, lwfit):
 
-    measure_obst = obstacles_coordinates(obstacles,mapper)
+    measure_obst, measure_obst_c,measure_obst_r = obstacles_coordinates(obstacles,mapper)
     new_paths_idx = []
     for i in range(len(frenet_paths)):
         if np.array(rwfit!=None).all():
@@ -103,6 +111,14 @@ def check_paths(frenet_paths, obstacles, rpose, mapper, rwfit, lwfit):
             collision = check_collisions(frenet_paths[i], measure_obst)
             if not collision:
                 continue
+            else:
+                # collision_r = check_collisions(frenet_paths[i], measure_obst_r)
+                # if not collision_r:
+                #     continue
+                #else:
+                collision_c = check_collisions(frenet_paths[i], measure_obst_c)
+                if not collision_c:
+                    continue
         new_paths_idx.append(i) 
     return [frenet_paths[i] for i in new_paths_idx]
 
@@ -127,7 +143,7 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
     # transformer 
     transformer = FrenetDKTransform()
     # Controller
-    controller = FrenetIOLController(.5, 0.0, 50, 0.0, 0.0)
+    controller = FrenetIOLController(.5, 0.0, 27, 0.0, 0.0)
     # Mapper
     mapper = MapperSemanticObstacles()
     # Env initialize
@@ -201,8 +217,8 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
         im3.set_data(mapper.plot_image_p)
         env.render()
         return [im1, im2, im3]
-    ani = animation.FuncAnimation(fig, animate, frames=20000, interval=50, blit=True)
-    # ani.save("./prova_magic_obs.mp4", writer="ffmpeg")
+    ani = animation.FuncAnimation(fig, animate, frames=1000, interval=50, blit=True)
+    #ani.save("./images/duckietown_video/planner_with_obstacles.mp4", writer="ffmpeg")
     plt.show()
     
 

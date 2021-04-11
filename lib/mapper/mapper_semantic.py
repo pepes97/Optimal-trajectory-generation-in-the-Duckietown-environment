@@ -207,8 +207,8 @@ class MapperSemantic():
                 line_offset = self.get_line_offset(pfit, rwfit)
             elif lwfit is not None:
                 line_offset = self.get_line_offset(pfit, lwfit)
-            else:
-                line_offset = self.get_line_offset(pfit, pfit)
+            # else:
+            #     line_offset = self.get_line_offset(pfit, pfit)
             if np.count_nonzero(self.mask_dict["yellow"]) < self.minimum_pixels:
                 if rwfit is not None:
                     line_fit = rwfit
