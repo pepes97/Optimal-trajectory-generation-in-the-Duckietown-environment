@@ -84,7 +84,7 @@ The Duckietown environment is `loop_obstacles`.
 python tester.py -t dt_obstacles
 ```
 
-![](./images/duckietown_video/planner_with_obstacles_1.gif)
+![](./images/duckietown_video/planner-with-obstacles-22.gif)
 
 ## Credits
 
