@@ -1,7 +1,7 @@
 # Optimal Trajectory Generation in the Duckietown Environment
 
 ## Introduction 
-The goal of the project is to implement  trajectory generation scheme, the approach  consists  in  reducing  the search   space   by   considering   the   optimization   of   specific   cost   functions   which   yield   polynomial trajectories, coupled with a feedforward control , to navigate in the Duckietown environment, which consists in a simulator providing customizable city-like scenarios with lanes and intersections. In this setting, the vehicle is controlled using information provided by the monocular camera on top of the vehicle, which is responsible for recognizing the center lane which defines  the  local  Frenet  frame.  The  simulations  are in  the  Duckietown  simulator (based  on  OpenAI  Gym)  using  Python.
+The goal of the project is to implement  trajectory generation scheme, the approach  consists  in  reducing  the search   space   by   considering   the   optimization   of   specific   cost   functions   which   yield   polynomial trajectories, coupled with a feedbacl linearization control, to navigate in the Duckietown environment, which consists in a simulator providing customizable city-like scenarios with lanes and intersections. In this setting, the vehicle is controlled using information provided by the monocular camera on top of the vehicle, which is responsible for recognizing the center lane which defines  the  local  Frenet  frame.  The  simulations  are in  the  Duckietown  simulator (based  on  OpenAI  Gym)  using  Python.
 
 ## Table of Contents
 
