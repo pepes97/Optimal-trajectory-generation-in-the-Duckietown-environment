@@ -8,7 +8,7 @@ from ..planner import TrajectoryPlannerOptimal, TrajectoryPlannerParamsOptimal
 from ..trajectory import SplineTrajectory2D
 from ..planner import Frenet
 from ..logger import timeprofiledecorator
-from ..plotter import plot_4_paths_lst
+from ..plotter import plot_4_paths_lst, plot_3_paths_lst, plot_lateral, plot_long, plot_target, plot_xy
 import math
 from matplotlib import pyplot as plt
 
@@ -43,6 +43,7 @@ def test_optimal_frenet(*args, **kwargs):
     stop = False
     merge = False
     follow = False
+    single = False
     if 'plot' in kwargs:
         plot_flag = kwargs['plot']
     if 'store_plot' in kwargs:
@@ -53,7 +54,10 @@ def test_optimal_frenet(*args, **kwargs):
         merge = kwargs['merge']
     if 'follow' in kwargs:
         follow = kwargs['follow']
+    if 'single' in kwargs:
+        single = kwargs['single']
 
+  
     if stop:
         s_target = Target(s0=op.s0_t, s1=op.s1_t, Ts=op.Ts).get_frenet_stop_target()
     
@@ -65,7 +69,7 @@ def test_optimal_frenet(*args, **kwargs):
     
     else:
         s_target = None
-    
+
     # Lateral and longitudinal paths
     frenet_paths_cd_cv = []
     planner = TrajectoryPlannerOptimal(TrajectoryPlannerParamsOptimal())
@@ -83,12 +87,13 @@ def test_optimal_frenet(*args, **kwargs):
         planner.replan_ctot(t)
         frenet_paths_ctot.append(planner.paths)
     
-    planner.initialize(t0 = op.t0, p0 = op.p, s0=op.s, s_target = s_target)
-    frenet_paths_ct = []
+    if s_target is not None:
+        planner.initialize(t0 = op.t0, p0 = op.p, s0=op.s, s_target = s_target)
+        frenet_paths_ct = []
 
-    for i,t in enumerate(op.Tn):
-        planner.replan_ct(t)
-        frenet_paths_ct.append(planner.paths)
+        for i,t in enumerate(op.Tn):
+            planner.replan_ct(t)
+            frenet_paths_ct.append(planner.paths)
     
     planner.initialize(t0 = op.t0, p0 = op.px, s0=op.sx)
     planner.klat = 0.3
@@ -103,13 +108,29 @@ def test_optimal_frenet(*args, **kwargs):
     spline = SplineTrajectory2D(wx, wy)
 
     frenet_xy_ctot = frenet_coordinates_xy(frenet_paths_xy, spline)
-
     @timeprofiledecorator
     def __plot_fn(store: str=None):
-        plot_4_paths_lst(frenet_paths_cd_cv,frenet_paths_cd_cv, frenet_paths_ct, frenet_xy_ctot, spline, target=s_target)
-        if store is not None:
+        if s_target is not None:
+            if single:
+                plot_target(frenet_paths_ct, target=s_target)
+                #plt.savefig("./images/optimal/target_stop.png")
+            else:
+                plot_4_paths_lst(frenet_paths_cd_cv,frenet_paths_cd_cv, frenet_paths_ct, frenet_xy_ctot, spline, target=s_target)
+        else:
+            if single:
+                plot_lateral(frenet_paths_cd_cv)
+                #plt.savefig("./images/optimal/lateral_low.png")
+                # fig2 = plot_long(frenet_paths_cd_cv)
+                # plt.savefig("./images/optimal/long.png")
+                # plot_xy(frenet_xy_ctot, spline)
+                # plt.savefig("./images/optimal/combination.png")
+            else:
+                plot_3_paths_lst(frenet_paths_cd_cv,frenet_paths_cd_cv, frenet_xy_ctot, spline)
+
+        #if store is not None:
             # TODO (generate path inside images/<timeoftheday>/store:str)
-            ani.save(store)
+            #ani.save(store)
+            
             #ani.save(store, writer='ffmpeg')  
         plt.show()
     if plot_flag:

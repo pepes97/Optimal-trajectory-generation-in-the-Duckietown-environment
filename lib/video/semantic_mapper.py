@@ -97,12 +97,14 @@ class SemanticMapper:
         # Handle white elements
         for i, fdict in enumerate(feat_dict['white']):
             eigratio = fdict['eigs'][0] / fdict['eigs'][1]
+            center = fdict['center']
+            area = fdict['area']
             if eigratio >= 100. and eigratio <= 500. or fdict['area'] > 9000.:
                 fdict['class'] = ObjectType.WHITE_LINE
             else:
                 fdict['class'] = ObjectType.UNKNOWN
             object_dict[fdict['class']].append(fdict)
-            # print(f'WHITE{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
+            print(f'WHITE{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
 
         # Handle red elements
         # TODO
@@ -219,17 +221,17 @@ class SemanticMapper:
             r_fit = None
             self.last_white_fit = l_fit
             self.right = False
-            offset_w = 2
+            offset_w = 3
             
-        if len(object_dict[ObjectType.LEFT_LINE]) == 1: 
-            obj = object_dict[ObjectType.LEFT_LINE][0]
-            l_mask_white =cv2.drawContours(mask_cont, obj["contour"], -1, (255, 255, 255),
-                                         thickness=cv2.FILLED)
-            xy = linspace()
-            l_points = xy[l_mask_white[...,1]>0]
-            lx_points = l_points[:,0]
-            ly_points = l_points[:,1]
-            l_fit = np.polyfit(ly_points, lx_points, 2)
+        # if len(object_dict[ObjectType.LEFT_LINE]) == 1: 
+        #     obj = object_dict[ObjectType.LEFT_LINE][0]
+        #     l_mask_white =cv2.drawContours(mask_cont, obj["contour"], -1, (255, 255, 255),
+        #                                  thickness=cv2.FILLED)
+        #     xy = linspace()
+        #     l_points = xy[l_mask_white[...,1]>0]
+        #     lx_points = l_points[:,0]
+        #     ly_points = l_points[:,1]
+        #     l_fit = np.polyfit(ly_points, lx_points, 2)
 
         else:  
             if self.right:
@@ -239,7 +241,7 @@ class SemanticMapper:
             else:
                 r_fit = None
                 l_fit = self.last_white_fit
-                offset_w = 2
+                offset_w = 3
 
         #return object_dict, yellow_fit,yellow_midpts, right_white_fit, right_white_midpts,left_white_fit, left_white_midpts, feat_dict
         return object_dict,yellow_fit,yellow_midpts,r_fit, l_fit, offset_y,offset_w
