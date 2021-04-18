@@ -148,7 +148,9 @@ def test_duckietown_ekf_slam(*args, **kwargs):
 
         obs, reward, done, info = env.step(u)
 
-        # controls = np.array(info['Simulator']['action'])
+        controls = np.array(info['Simulator']['action'])
+
+        # u = controls*np.r_[0.6988, 0.4455]
 
         robot_p, robot_dp = robot.step(u=u, dt=dt)
 
@@ -177,9 +179,10 @@ def test_duckietown_ekf_slam(*args, **kwargs):
             curvature = trajectory.compute_curvature(est_pt)
             # Compute control
             u = controller.compute(robot_fpose, error, derror, curvature)
-            if np.linalg.norm(u) != 0: 
-                u = u / np.linalg.norm(u)
+            # if np.linalg.norm(u) != 0: 
+            #     u = u / np.linalg.norm(u)
             # Step the unicycle            
+            # u = controller.compute(robot_fpose, error, derror, curvature)/np.r_[0.6988, 0.4455]
             
             # print(f'fpose={robot_fpose}, u={u}') 
 

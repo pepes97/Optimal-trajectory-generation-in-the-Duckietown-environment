@@ -235,7 +235,7 @@ class TrajectoryPlannerV1DTObstacles(Planner):
                 self.dd = dd
             if dsd != None: # velocity keeping
                 self.desired_speed = dsd
-        if (time <= self.opt_path_tot.t[0] or time >= self.opt_path_tot.t[-10]) or force:
+        if (time <= self.opt_path_tot.t[0] or time >= self.opt_path_tot.t[-20]) or force:
             self.replan_ctot(time=time)
         else:
             self.p0 = self.optimal_at_time(time, self.opt_path_tot, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)

@@ -168,6 +168,7 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
         robot_p, robot_dp = robot.step(actual_u, dt)
         line_found, trajectory, obstacles, rwfit, lwfit, rw, lw = mapper.process(obs, verbose = 1)
 
+
         if line_found:
             # Estimate frenet frame
             robot_p = np.array([0.1,0.0,0.0])
@@ -194,8 +195,9 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
             # Get curvature
             curvature = trajectory.compute_curvature(est_pt)
             # Compute control
-            u = controller.compute(robot_fpose, error, derror, curvature)  
-
+            u = controller.compute(robot_fpose, error, derror, curvature)/np.r_[0.6988, 0.4455]
+            # linear_control = desired_linear_speed_control/0.6988
+            # angular_control = desired_angular_speed_control/0.4455
         im1.set_data(obs)
         im2.set_data(mapper.plot_image_w)
         im3.set_data(mapper.plot_image_p)
