@@ -219,7 +219,7 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
             # Get curvature
             curvature = trajectory.compute_curvature(est_pt)
             # Compute control
-            u = controller.compute(robot_fpose, error, derror, curvature)/np.r_[0.6988, 0.4455]
+            u = controller.compute(robot_fpose, error, derror, curvature)#/np.r_[0.6988, 0.4455]
             # linear_control = desired_linear_speed_control/0.6988
             # angular_control = desired_angular_speed_control/0.4455
         im1.set_data(obs)
@@ -228,7 +228,7 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
         env.render()
         return [im1, im2, im3]
     ani = animation.FuncAnimation(fig, animate, frames=1000, interval=50, blit=True)
-    ani.save("./images/duckietown_video/planner_with_obstacles_2.mp4", writer="ffmpeg")
+    # ani.save("./images/duckietown_video/planner_with_obstacles_2.mp4", writer="ffmpeg")
     plt.show()
     
 

@@ -18,6 +18,6 @@ class OptimalParameters:
     s0_tb = (3,2,0)
     s1_tb = (10,0,0)
 
-    px=(3,0.2,0)
+    px= (3,0.2,0)
     sx = (0.8,2,-0.5)
 op = OptimalParameters

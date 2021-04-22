@@ -54,7 +54,7 @@ class Unicycle:
             dx = d_rho * Sin(d_theta)
             dy = d_rho * Cos(d_theta)
             # since we start from different position wrt the origin
-            # we have to express the increment in a wrt a different frame
+            # we have to express the increment wrt a different frame
             Dx = np.array([dx,dy,d_theta])
             dp = t2v(v2t(self.p0)@v2t(Dx)) - self.p
             theta = np.arctan2(np.sin(dp[2:]),np.cos(dp[2:])) # need normalization

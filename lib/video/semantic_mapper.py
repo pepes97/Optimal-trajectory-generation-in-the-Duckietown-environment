@@ -104,12 +104,12 @@ class SemanticMapper:
             else:
                 fdict['class'] = ObjectType.UNKNOWN
             object_dict[fdict['class']].append(fdict)
-            print(f'WHITE{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
+            # print(f'WHITE{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
 
         # Handle red elements
         # TODO
         # Fit yellow line if possible
-        if len(object_dict[ObjectType.YELLOW_LINE]) < 2:
+        if len(object_dict[ObjectType.YELLOW_LINE]) < 6:
             yellow_fit = None
             yellow_midpts = None
             yellow_fit = self.last_yellow_fit

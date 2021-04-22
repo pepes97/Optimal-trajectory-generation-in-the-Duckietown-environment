@@ -39,7 +39,7 @@ class MapperSemanticObstacles():
         self.trajectory_width = 0.21 #[m]
         self.white_tape = 0.048 #[m]
         self.yellow_tape = 0.024 #[m]
-        self.line_offset = 60 #[px]
+        self.line_offset = 65 #[px]
         self.pixel_ratio = (self.trajectory_width+ \
             self.yellow_tape/2+self.white_tape/2)/(self.line_offset*2) #[m/px] = 0.00082
         self.proj_planner = None
@@ -72,6 +72,9 @@ class MapperSemanticObstacles():
     def process_obstacles(self, frame):
         # Generate warped frame
         wframe = self.projector.warp(frame)
+        # wframe[:120,:,:] = 0
+        wframe[:,:150,:] = 0
+        wframe[:,-150:,:] = 0
         for fkey in self.filter_dict.keys():
             self.mask_dict[fkey] = self.filter_dict[fkey].process(wframe)
         mask_t = cv2.bitwise_or(self.mask_dict['white'], self.mask_dict['yellow'])
@@ -226,7 +229,7 @@ class MapperSemanticObstacles():
                     line_fit = lwfit
                 offset = offset_w
             else:
-                print(yellow_midpts)
+                # print(yellow_midpts)
                 if yellow_midpts is None and rwfit is not None:
                     line_fit = rwfit
                     offset = offset_w
