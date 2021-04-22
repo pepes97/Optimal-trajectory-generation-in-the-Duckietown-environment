@@ -55,7 +55,8 @@ def check_collisions(path,obstacles):
         oby = ob[1]
         distance = [((ix - obx) ** 2 + (iy - oby) ** 2) for ix, iy in zip(path.x, path.y)]
         collision = any([di <= (dp.AGENT_SAFETY_RAD)**2 for di in distance])
-        if collision:
+        stop_before = True if path.x[-1]<obx else False
+        if collision or stop_before:
             return False
     return True               
 

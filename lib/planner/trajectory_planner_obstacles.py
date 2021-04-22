@@ -23,8 +23,8 @@ class TrajectoryPlannerDefaultParamsDTObstacles:
     delta_t = 0.5
     desired_speed = 0.5
     max_road_width = 0.3
-    min_t = 2
-    max_t = 3
+    min_t = 3
+    max_t = 4
     d_road_width = 0.1
     d_d_s = 0.2
     low_speed_threshold = 0.2

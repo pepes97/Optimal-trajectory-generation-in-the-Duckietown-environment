@@ -85,9 +85,9 @@ class SemanticMapper:
         for i, fdict in enumerate(feat_dict['yellow']):
             area = fdict['area']
             eigratio = fdict['eigs'][0] / fdict['eigs'][1]
-            if area >= 2000:
+            if area >= 1000:
                 fdict['class'] = ObjectType.DUCK
-            elif eigratio > 23. or area < 250 or eigratio < 2.:
+            elif eigratio > 50. or area < 250 or eigratio < 0.:
                 fdict['class'] = ObjectType.UNKNOWN
             else:
                 fdict['class'] = ObjectType.YELLOW_LINE
