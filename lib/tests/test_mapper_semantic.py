@@ -116,7 +116,7 @@ def test_mapper_semantic_planner(*args, **kwargs):
         env.render()
         return [im1, im2, im3]
     ani = animation.FuncAnimation(fig, animate, frames=1300, interval=50, blit=True)
-    ani.save("./images/duckietown_video/planner_without_obstacles_6.mp4", writer="ffmpeg")
+    ani.save("./images/duckietown_video/planner_without_obstacles_7.mp4", writer="ffmpeg")
     #ani.save("./images/duckietown_video/planner_without_obstacles.gif")
     plt.show()
     

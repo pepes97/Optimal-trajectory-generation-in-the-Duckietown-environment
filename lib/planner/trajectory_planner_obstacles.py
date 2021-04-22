@@ -153,7 +153,7 @@ class TrajectoryPlannerV1DTObstacles(Planner):
                 for di in np.arange(self.di_interval[0], self.di_interval[1], self.di_interval[2]):
                     f = copy.deepcopy(ft)
                     # Fill Frenet class for d
-                    if ds0 < self.low_speed_threshold and S>0: # low speed
+                    if ds0 < self.low_speed_threshold and S>0 and False: # low speed
                         path = QuinticPolynomial(p0, dp0, ddp0, di, 0.0, 0.0, S)
                         f.d = [path.compute_pt(abs(s-s0)) for s in f.s]
                         f.dot_d = [path.compute_first_derivative(abs(s-s0)) for s in f.s]

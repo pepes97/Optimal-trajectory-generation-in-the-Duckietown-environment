@@ -55,6 +55,9 @@ def check_collisions(path,obstacles):
         oby = ob[1]
         distance = [((ix - obx) ** 2 + (iy - oby) ** 2) for ix, iy in zip(path.x, path.y)]
         collision = any([di <= (dp.AGENT_SAFETY_RAD)**2 for di in distance])
+        stop_before = True if path.x[-1]<obx else False
+        # if collision or stop_before:
+        #     return False
         if collision:
             return False
     return True               
@@ -123,10 +126,10 @@ def check_paths(frenet_paths, obstacles, rpose, mapper, rwfit, lwfit):
                 collision_lat = check_collisions(frenet_paths[i], measure_obst_lat)
                 if not collision_lat:
                     continue
-                # else:
-                #     collision_top = check_collisions(frenet_paths[i], measure_obst_top)
-                #     if not collision_top:
-                #         continue
+                else:
+                    collision_top = check_collisions(frenet_paths[i], measure_obst_top)
+                    if not collision_top:
+                        continue
         new_paths_idx.append(i) 
     return [frenet_paths[i] for i in new_paths_idx]
 
@@ -229,7 +232,7 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
         return [im1, im2, im3]
     ani = animation.FuncAnimation(fig, animate, frames=1500, interval=50, blit=True, cache_frame_data= False)
     writervideo = animation.FFMpegWriter(fps=30)
-    ani.save('./images/duckietown_video/planner_with_obstacles_4.mp4', writer=writervideo)
+    ani.save('./images/duckietown_video/planner_with_obstacles_5.mp4', writer=writervideo)
     #ani.save("./images/duckietown_video/planner_with_obstacles_3.mp4", writer="ffmpeg")
     plt.show()
     
