@@ -66,7 +66,7 @@ class SemanticMapper:
         self.right = True
         pass
 
-    def process(self, segment_dict, mask_cont):
+    def process(self, segment_dict, mask_cont, obs = False):
         # Extract features for each color
         feat_dict = {'white': None, 'yellow': None, 'red': None}
         object_dict = {ObjectType.UNKNOWN: [],
@@ -85,9 +85,10 @@ class SemanticMapper:
         for i, fdict in enumerate(feat_dict['yellow']):
             area = fdict['area']
             eigratio = fdict['eigs'][0] / fdict['eigs'][1]
+            center = fdict['center']
             if area >= 2000:
                 fdict['class'] = ObjectType.DUCK
-            elif eigratio > 23. or area < 250 or eigratio < 2.:
+            elif eigratio > 23. or area < 250 or eigratio < 1.:
                 fdict['class'] = ObjectType.UNKNOWN
             else:
                 fdict['class'] = ObjectType.YELLOW_LINE
@@ -99,17 +100,22 @@ class SemanticMapper:
             eigratio = fdict['eigs'][0] / fdict['eigs'][1]
             center = fdict['center']
             area = fdict['area']
-            if eigratio >= 100. and eigratio <= 500. or fdict['area'] > 9000.:
+            if eigratio >= 8. and eigratio <= 500. or fdict['area'] > 9000.:
                 fdict['class'] = ObjectType.WHITE_LINE
             else:
                 fdict['class'] = ObjectType.UNKNOWN
             object_dict[fdict['class']].append(fdict)
-            # print(f'WHITE{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
+            print(f'WHITE{i}: type={fdict["class"]}, area={area}, eigratio={eigratio:.3f}, center={center}')
 
         # Handle red elements
         # TODO
         # Fit yellow line if possible
-        if len(object_dict[ObjectType.YELLOW_LINE]) < 6:
+        if obs:
+            thresh = 6
+        else:
+            thresh = 4
+        print(thresh)
+        if len(object_dict[ObjectType.YELLOW_LINE]) < thresh:
             yellow_fit = None
             yellow_midpts = None
             yellow_fit = self.last_yellow_fit

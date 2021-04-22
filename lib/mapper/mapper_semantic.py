@@ -69,6 +69,9 @@ class MapperSemantic():
     def process_obstacles(self, frame):
         # Generate warped frame
         wframe = self.projector.warp(frame)
+        #wframe[:120,:,:] = 0
+        # wframe[:,:100,:] = 0
+        # wframe[:,-100:,:] = 0
         for fkey in self.filter_dict.keys():
             self.mask_dict[fkey] = self.filter_dict[fkey].process(wframe)
         mask_t = cv2.bitwise_or(self.mask_dict['white'], self.mask_dict['yellow'])
@@ -181,7 +184,7 @@ class MapperSemantic():
     def draw_path(self):
         if np.array(self.proj_planner!=None).all():
             proj = self.rob2cam(self.proj_planner[None])[0]
-            robot_p = np.array([0.07,0.0])
+            robot_p = np.array([0.1,0.0])
             rob = self.rob2cam(robot_p[None])[0]
             cv2.circle(self.plot_image_p, (rob[0], rob[1]), 10, (255, 0, 0), -1)
             cv2.arrowedLine(self.plot_image_p, (rob[0], rob[1]), (proj[0], proj[1]), (255, 0, 0), 5) # distance to projection

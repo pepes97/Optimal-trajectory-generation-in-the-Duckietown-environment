@@ -123,10 +123,10 @@ def check_paths(frenet_paths, obstacles, rpose, mapper, rwfit, lwfit):
                 collision_lat = check_collisions(frenet_paths[i], measure_obst_lat)
                 if not collision_lat:
                     continue
-                else:
-                    collision_top = check_collisions(frenet_paths[i], measure_obst_top)
-                    if not collision_top:
-                        continue
+                # else:
+                #     collision_top = check_collisions(frenet_paths[i], measure_obst_top)
+                #     if not collision_top:
+                #         continue
         new_paths_idx.append(i) 
     return [frenet_paths[i] for i in new_paths_idx]
 
@@ -190,7 +190,7 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
         obs, reward, done, info = env.step(u)
         actual_u = np.array(info['Simulator']['action'])
         robot_p, robot_dp = robot.step(actual_u, dt)
-        line_found, trajectory, obstacles, rwfit, lwfit, rw, lw = mapper.process(obs, verbose = 1)
+        line_found, trajectory, obstacles, rwfit, lwfit, rw, lw = mapper.process(obs, verbose = 1, obstacle=True)
 
 
         if line_found:
@@ -227,8 +227,10 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
         im3.set_data(mapper.plot_image_p)
         env.render()
         return [im1, im2, im3]
-    ani = animation.FuncAnimation(fig, animate, frames=1000, interval=50, blit=True)
-    # ani.save("./images/duckietown_video/planner_with_obstacles_2.mp4", writer="ffmpeg")
+    ani = animation.FuncAnimation(fig, animate, frames=1500, interval=50, blit=True, cache_frame_data= False)
+    writervideo = animation.FFMpegWriter(fps=30)
+    ani.save('./images/duckietown_video/planner_with_obstacles_4.mp4', writer=writervideo)
+    #ani.save("./images/duckietown_video/planner_with_obstacles_3.mp4", writer="ffmpeg")
     plt.show()
     
 

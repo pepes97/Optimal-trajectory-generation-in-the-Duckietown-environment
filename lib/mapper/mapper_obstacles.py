@@ -69,12 +69,12 @@ class MapperSemanticObstacles():
         offset_mean.append(line_offset)
         return np.mean(line_offset).astype(int)
     
-    def process_obstacles(self, frame):
+    def process_obstacles(self, frame, obstacle):
         # Generate warped frame
         wframe = self.projector.warp(frame)
-        # wframe[:120,:,:] = 0
-        wframe[:,:150,:] = 0
-        wframe[:,-150:,:] = 0
+        #wframe[:20,:,:] = 0
+        # wframe[:,:100,:] = 0
+        # wframe[:,-100:,:] = 0
         for fkey in self.filter_dict.keys():
             self.mask_dict[fkey] = self.filter_dict[fkey].process(wframe)
         mask_t = cv2.bitwise_or(self.mask_dict['white'], self.mask_dict['yellow'])
@@ -83,7 +83,7 @@ class MapperSemanticObstacles():
         # Mask contours
         mask_cont = np.zeros_like(wframe, dtype='uint8')
         # Generate semantic dictionary
-        object_dict, pfit,yellow_midpts,rwfit,lwfit, offset_y,offset_w = self.semantic_mapper.process(self.segment_dict, mask_cont)
+        object_dict, pfit,yellow_midpts,rwfit,lwfit, offset_y,offset_w = self.semantic_mapper.process(self.segment_dict, mask_cont, obstacle)
         # Apply obstacle tracking
         obstacles, all_obstacles = self.obstacle_tracker.process(object_dict)
         return wframe, obstacles, object_dict,pfit,yellow_midpts,rwfit,lwfit,offset_y,offset_w
@@ -264,8 +264,8 @@ class MapperSemanticObstacles():
         lw = np.polyfit(lw[:,0],lw[:,1],2)
         return rw,lw
 
-    def process(self, frame, verbose = 0):  
-        self.plot_image_w, obstacles, object_dict,pfit,yellow_midpts,rwfit,lwfit,offset_y,offset_w = self.process_obstacles(frame)
+    def process(self, frame, verbose = 0, obstacle = False):  
+        self.plot_image_w, obstacles, object_dict,pfit,yellow_midpts,rwfit,lwfit,offset_y,offset_w = self.process_obstacles(frame,obstacle )
         # Mask Generation for obstacles
         self.plot_image_w = self.obstacle_mask_generation(obstacles)
         # Frame projection

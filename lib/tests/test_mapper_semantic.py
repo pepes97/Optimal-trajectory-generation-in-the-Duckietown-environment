@@ -94,7 +94,7 @@ def test_mapper_semantic_planner(*args, **kwargs):
 
         if line_found:
             # Estimate frenet frame
-            robot_p = np.array([0.07,0.0,0.0])
+            robot_p = np.array([0.1,0.0,0.0])
             est_pt = transformer.estimatePosition(trajectory,  robot_p)
             # Robot pose in frenet
             robot_fpose = transformer.transform(robot_p)
@@ -115,8 +115,8 @@ def test_mapper_semantic_planner(*args, **kwargs):
         im3.set_data(mapper.plot_image_p)
         env.render()
         return [im1, im2, im3]
-    ani = animation.FuncAnimation(fig, animate, frames=1200, interval=50, blit=True)
-    #ani.save("./images/duckietown_video/planner_without_obstacles_2.mp4", writer="ffmpeg")
+    ani = animation.FuncAnimation(fig, animate, frames=1300, interval=50, blit=True)
+    ani.save("./images/duckietown_video/planner_without_obstacles_6.mp4", writer="ffmpeg")
     #ani.save("./images/duckietown_video/planner_without_obstacles.gif")
     plt.show()
     
