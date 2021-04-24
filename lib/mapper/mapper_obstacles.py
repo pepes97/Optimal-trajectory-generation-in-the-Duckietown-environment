@@ -39,7 +39,7 @@ class MapperSemanticObstacles():
         self.trajectory_width = 0.21 #[m]
         self.white_tape = 0.048 #[m]
         self.yellow_tape = 0.024 #[m]
-        self.line_offset = 65 #[px]
+        self.line_offset = 60 #[px]
         self.pixel_ratio = (self.trajectory_width+ \
             self.yellow_tape/2+self.white_tape/2)/(self.line_offset*2) #[m/px] = 0.00082
         self.proj_planner = None

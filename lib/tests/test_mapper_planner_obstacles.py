@@ -123,13 +123,14 @@ def check_paths(frenet_paths, obstacles, rpose, mapper, rwfit, lwfit):
             if not collision_r:
                 continue
             else:
+                # collision_c = check_collisions(frenet_paths[i], measure_obst_c)
+                # if not collision_c:
+                #     continue
+                # else:
                 collision_lat = check_collisions(frenet_paths[i], measure_obst_lat)
                 if not collision_lat:
                     continue
-                else:
-                    collision_top = check_collisions(frenet_paths[i], measure_obst_top)
-                    if not collision_top:
-                        continue
+                
         new_paths_idx.append(i) 
     return [frenet_paths[i] for i in new_paths_idx]
 
@@ -188,11 +189,28 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
     planner.initialize(t0=0, p0=d0, s0=s0)
     dt = 1/30
     switch = {'gate1':False,'gate2':False, 'tolerance':0}
+    all_v = []
+    all_omega= []
+    all_v.append(u[0])
+    all_omega.append(u[1])
+    wheel_v = []
+    wheel_omega = []
+    wheel_v.append(u[0])
+    wheel_omega.append(u[1])
+    
     def animate(i):
         global u, robot_p, robot_dp, robot_ddp, pos_s, pos_d
         obs, reward, done, info = env.step(u)
         actual_u = np.array(info['Simulator']['action'])
-        robot_p, robot_dp = robot.step(actual_u, dt)
+        WHEEL_DIST = 0.102
+        RADIUS = 0.0318
+        u_real = np.array([RADIUS/2 * (actual_u[1]+actual_u[0]), RADIUS/WHEEL_DIST * (-actual_u[1]+actual_u[0])])
+        u_robot = u_real/dt
+        u_robot = u_robot/np.r_[1.111, -1.111]
+        #u_robot = u_robot/np.r_[0.6988,0.4455]
+        wheel_v.append(u_robot[0])
+        wheel_omega.append(u_robot[1])
+        robot_p, robot_dp = robot.step(u_robot, dt)
         line_found, trajectory, obstacles, rwfit, lwfit, rw, lw = mapper.process(obs, verbose = 1, obstacle=True)
 
 
@@ -221,8 +239,14 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
             derror = np.array([pos_s[1], pos_d[1]])
             # Get curvature
             curvature = trajectory.compute_curvature(est_pt)
+            print(f"Input u robot: {u_robot}")
             # Compute control
-            u = controller.compute(robot_fpose, error, derror, curvature)#/np.r_[0.6988, 0.4455]
+            u = controller.compute(robot_fpose, error, derror, curvature)/np.r_[0.6988, 0.4455]
+            all_v.append(u[0])
+            all_omega.append(u[1])
+            print(f"Controll u: {u}")  
+            print(f"Rapporto v: {u_robot[0]/u[0]} e omega :{u_robot[1]/u[1]}")
+            
             # linear_control = desired_linear_speed_control/0.6988
             # angular_control = desired_angular_speed_control/0.4455
         im1.set_data(obs)
@@ -230,10 +254,43 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
         im3.set_data(mapper.plot_image_p)
         env.render()
         return [im1, im2, im3]
-    ani = animation.FuncAnimation(fig, animate, frames=1500, interval=50, blit=True, cache_frame_data= False)
-    writervideo = animation.FFMpegWriter(fps=30)
-    ani.save('./images/duckietown_video/planner_with_obstacles_5.mp4', writer=writervideo)
+    ani = animation.FuncAnimation(fig, animate, frames=850, interval=50, blit=True, cache_frame_data= False)
+    #writervideo = animation.FFMpegWriter(fps=30)
+    ani.save("./prova2.mp4", writer="ffmpeg")
+    #ani.save('./images/duckietown_video/planner_with_obstacles_7.mp4', writer="ffmpeg")
     #ani.save("./images/duckietown_video/planner_with_obstacles_3.mp4", writer="ffmpeg")
+    #plt.show()
+    t = np.arange(0, 852*(1/30), 1/30)
+    fig, ax = plt.subplots(2,1, figsize= (15,15))
+    #Plot control outputs
+    #len_tot = trajectory.get_len()
+    #u = data_storage.get(SimData.control)
+    line, = ax[0].plot(t,all_v, color = "r", label='v',  linewidth=2)
+    line2, = ax[0].plot(t,all_omega, color = "g", label='$\omega$',  linewidth=2)
+    # line, = ax.plot(u[0, :230], color = "r", label='v')
+    # line2, = ax.plot(u[1, :230], color = "g", label='$\omega$')
+    ax[0].set_title("Velocities at controller output with obstacles")
+    ax[0].legend([r"$v (m/s)$", r"$\omega (rad/s)$"])
+    ax[0].set_xlabel(r"$t (s)$")
+    ax[0].set_ylabel(r"$u$")
+    ax[0].set_xlim(-0.5,5)
+    ax[0].set_ylim(-4,5)
+    ax[0].set_aspect('equal', 'box')
+    ax[0].grid(True)
+
+    line3, = ax[1].plot(t,wheel_v, color = "r", label='v', linewidth=2)
+    line4, = ax[1].plot(t,wheel_omega, color = "g", label='$\omega$', linewidth=2)
+    # line, = ax.plot(u[0, :230], color = "r", label='v')
+    # line2, = ax.plot(u[1, :230], color = "g", label='$\omega$')
+    ax[1].set_title("Velocities at robot input with obstacles")
+    ax[1].legend([r"$v (m/s)$", r"$\omega (rad/s)$"])
+    ax[1].set_xlabel(r"$t (s)$")
+    ax[1].set_ylabel(r"$u$")
+    ax[1].set_xlim(-0.5,5)
+    ax[1].set_ylim(-4,5)
+    ax[1].set_aspect('equal', 'box')
+    ax[1].grid(True)
+    plt.savefig("./images/velocities/final_obs_short.png")
     plt.show()
     
 

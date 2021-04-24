@@ -8,6 +8,8 @@ import cv2
 from pyglet.window import key
 import pyglet
 import sys
+from ..logger import SimulationDataStorage, SimData, timeprofiledecorator
+
 from numpy import arange
 from ..video import *
 from ..controller import FrenetIOLController
@@ -84,17 +86,35 @@ def test_mapper_semantic_planner(*args, **kwargs):
     # Planner initialize
     planner.initialize(t0=0, p0=d0, s0=s0)
     dt = 1/30
+    all_v = []
+    all_omega= []
+    all_v.append(u[0])
+    all_omega.append(u[1])
+    wheel_v = []
+    wheel_omega = []
+    wheel_v.append(u[0])
+    wheel_omega.append(u[1])
 
     def animate(i):
         global u, robot_p, robot_dp, robot_ddp, pos_s, pos_d
         obs, reward, done, info = env.step(u)
+        #actual_u = np.array(info['Simulator']['wheel_velocities'])
         actual_u = np.array(info['Simulator']['action'])
-        robot_p, robot_dp = robot.step(actual_u, dt)
+        WHEEL_DIST = 0.102
+        RADIUS = 0.0318
+        u_real = np.array([RADIUS/2 * (actual_u[1]+actual_u[0]), RADIUS/WHEEL_DIST * (-actual_u[1]+actual_u[0])])
+        u_robot = u_real/dt
+        u_robot = u_robot/np.r_[1.111, -1.111]
+        #u_robot = u_robot/np.r_[0.6988,0.4455]
+        wheel_v.append(u_robot[0])
+        wheel_omega.append(u_robot[1])
+        #u_robot = u_robot/np.r_[, -1.222]
+        robot_p, robot_dp = robot.step(u_robot, dt)
         line_found, trajectory, obstacles = mapper.process(obs)
-
+        
         if line_found:
             # Estimate frenet frame
-            robot_p = np.array([0.1,0.0,0.0])
+            robot_p = np.array([0.07,0.0,0.0])
             est_pt = transformer.estimatePosition(trajectory,  robot_p)
             # Robot pose in frenet
             robot_fpose = transformer.transform(robot_p)
@@ -108,16 +128,57 @@ def test_mapper_semantic_planner(*args, **kwargs):
             # Get curvature
             curvature = trajectory.compute_curvature(est_pt)
             # Compute control
-            u = controller.compute(robot_fpose, error, derror, curvature)  
-        
+            print(f"Input u robot: {u_robot}")
+            u = controller.compute(robot_fpose, error, derror, curvature)
+            #u = u*np.r_[0.6988,0.4455]
+            all_v.append(u[0])
+            all_omega.append(u[1])
+            print(f"Controll u: {u}")  
+            print(f"Rapporto v: {u_robot[0]/u[0]} e omega :{u_robot[1]/u[1]}")
+            
         im1.set_data(obs)
         im2.set_data(mapper.plot_image_w)
         im3.set_data(mapper.plot_image_p)
         env.render()
         return [im1, im2, im3]
-    ani = animation.FuncAnimation(fig, animate, frames=1300, interval=50, blit=True)
-    ani.save("./images/duckietown_video/planner_without_obstacles_7.mp4", writer="ffmpeg")
+    ani = animation.FuncAnimation(fig, animate, frames=850, interval=50, blit=True)
+    ani.save("./prova.mp4", writer="ffmpeg")
     #ani.save("./images/duckietown_video/planner_without_obstacles.gif")
+    #plt.show()
+    t = np.arange(0, 852*(1/30), 1/30)
+    fig, ax = plt.subplots(2,1, figsize= (15,15))
+    #Plot control outputs
+    #len_tot = trajectory.get_len()
+    #u = data_storage.get(SimData.control)
+    
+    line, = ax[0].plot(t,all_v, color = "r", label='v',  linewidth=2)
+    line2, = ax[0].plot(t,all_omega, color = "g", label='$\omega$',  linewidth=2)
+    # line, = ax.plot(u[0, :230], color = "r", label='v')
+    # line2, = ax.plot(u[1, :230], color = "g", label='$\omega$')
+    ax[0].set_title("Velocities at controller output without obstacles")
+    ax[0].legend([r"$v (m/s)$", r"$\omega (rad/s)$"])
+    ax[0].set_xlabel(r"$t (s)$")
+    ax[0].set_ylabel(r"$u$")
+    ax[0].set_xlim(-0.5,5)
+    ax[0].set_ylim(-3,2)
+    ax[0].set_aspect('equal', 'box')
+    ax[0].grid(True)
+
+    line3, = ax[1].plot(t,wheel_v, color = "r", label='v', linewidth=2)
+    line4, = ax[1].plot(t,wheel_omega, color = "g", label='$\omega$', linewidth=2)
+    # line, = ax.plot(u[0, :230], color = "r", label='v')
+    # line2, = ax.plot(u[1, :230], color = "g", label='$\omega$')
+    ax[1].set_title("Velocities at robot input without obstacles")
+    ax[1].legend([r"$v (m/s)$", r"$\omega (rad/s)$"])
+    ax[1].set_xlabel(r"$t (s)$")
+    ax[1].set_ylabel(r"$u$")
+    ax[1].set_xlim(-0.5,5)
+    ax[1].set_ylim(-3,2)
+    ax[1].set_aspect('equal', 'box')
+    ax[1].grid(True)
+
+    plt.savefig("./images/velocities/final_no_obs_short.png")
     plt.show()
+    
     
 
