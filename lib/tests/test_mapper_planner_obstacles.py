@@ -204,9 +204,9 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
         actual_u = np.array(info['Simulator']['action'])
         WHEEL_DIST = 0.102
         RADIUS = 0.0318
-        u_real = np.array([RADIUS/2 * (actual_u[1]+actual_u[0]), RADIUS/WHEEL_DIST * (-actual_u[1]+actual_u[0])])
+        u_real = np.array([RADIUS/2 * (actual_u[1]+actual_u[0]), RADIUS/WHEEL_DIST * (actual_u[1]-actual_u[0])])
         u_robot = u_real/dt
-        u_robot = u_robot/np.r_[1.111, -1.111]
+        u_robot = u_robot/np.r_[1.111, 1.111]
         #u_robot = u_robot/np.r_[0.6988,0.4455]
         wheel_v.append(u_robot[0])
         wheel_omega.append(u_robot[1])
@@ -254,13 +254,13 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
         im3.set_data(mapper.plot_image_p)
         env.render()
         return [im1, im2, im3]
-    ani = animation.FuncAnimation(fig, animate, frames=850, interval=50, blit=True, cache_frame_data= False)
+    ani = animation.FuncAnimation(fig, animate, frames=1100, interval=50, blit=True, cache_frame_data= False)
     #writervideo = animation.FFMpegWriter(fps=30)
     ani.save("./prova2.mp4", writer="ffmpeg")
     #ani.save('./images/duckietown_video/planner_with_obstacles_7.mp4', writer="ffmpeg")
     #ani.save("./images/duckietown_video/planner_with_obstacles_3.mp4", writer="ffmpeg")
     #plt.show()
-    t = np.arange(0, 852*(1/30), 1/30)
+    t = np.arange(0, 1102*(1/30), 1/30)
     fig, ax = plt.subplots(2,1, figsize= (15,15))
     #Plot control outputs
     #len_tot = trajectory.get_len()
@@ -273,8 +273,8 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
     ax[0].legend([r"$v (m/s)$", r"$\omega (rad/s)$"])
     ax[0].set_xlabel(r"$t (s)$")
     ax[0].set_ylabel(r"$u$")
-    ax[0].set_xlim(-0.5,5)
-    ax[0].set_ylim(-4,5)
+    #ax[0].set_xlim(-0.5,5)
+    ax[0].set_ylim(-6,9)
     ax[0].set_aspect('equal', 'box')
     ax[0].grid(True)
 
@@ -286,11 +286,11 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
     ax[1].legend([r"$v (m/s)$", r"$\omega (rad/s)$"])
     ax[1].set_xlabel(r"$t (s)$")
     ax[1].set_ylabel(r"$u$")
-    ax[1].set_xlim(-0.5,5)
-    ax[1].set_ylim(-4,5)
+    #ax[1].set_xlim(-0.5,5)
+    ax[1].set_ylim(-6,9)
     ax[1].set_aspect('equal', 'box')
     ax[1].grid(True)
-    plt.savefig("./images/velocities/final_obs_short.png")
+    plt.savefig("./images/velocities/final_obs_2.png")
     plt.show()
     
 
