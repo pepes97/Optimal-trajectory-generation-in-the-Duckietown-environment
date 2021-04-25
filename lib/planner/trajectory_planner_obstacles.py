@@ -22,9 +22,9 @@ class TrajectoryPlannerDefaultParamsDTObstacles:
     sampling_t = 0.05
     delta_t = 0.5
     desired_speed = 0.5
-    max_road_width = 0.3
-    min_t = 3
-    max_t = 4
+    max_road_width = 0.5
+    min_t = 2
+    max_t = 3
     d_road_width = 0.1
     d_d_s = 0.2
     low_speed_threshold = 0.2
@@ -235,7 +235,7 @@ class TrajectoryPlannerV1DTObstacles(Planner):
                 self.dd = dd
             if dsd != None: # velocity keeping
                 self.desired_speed = dsd
-        if (time <= self.opt_path_tot.t[0] or time >= self.opt_path_tot.t[-20]) or force:
+        if (time <= self.opt_path_tot.t[0] or time >= self.opt_path_tot.t[-30]) or force:
             self.replan_ctot(time=time)
         else:
             self.p0 = self.optimal_at_time(time, self.opt_path_tot, "d") # Initial step in frenet-frame as tuple (p0, dp0, ddp0)

@@ -69,6 +69,9 @@ class MapperSemantic():
     def process_obstacles(self, frame):
         # Generate warped frame
         wframe = self.projector.warp(frame)
+        #wframe[:120,:,:] = 0
+        # wframe[:,:100,:] = 0
+        # wframe[:,-100:,:] = 0
         for fkey in self.filter_dict.keys():
             self.mask_dict[fkey] = self.filter_dict[fkey].process(wframe)
         mask_t = cv2.bitwise_or(self.mask_dict['white'], self.mask_dict['yellow'])
