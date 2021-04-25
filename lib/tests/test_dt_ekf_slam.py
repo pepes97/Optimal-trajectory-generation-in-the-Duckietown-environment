@@ -111,9 +111,12 @@ def test_duckietown_ekf_slam(*args, **kwargs):
     im4, = ax[2].plot([], [], 'rx') # estimated landmarks
     im5, = ax[2].plot([], [], 'g-') # odometry only path
 
-    ax[2].set_xlim(-1,2)
-    ax[2].set_ylim(-1,2)
-    
+    ax[2].set_xlim(-2,3)
+    ax[2].set_ylim(-2,3)
+    ax[2].set_aspect('equal', 'box')
+
+    fig.tight_layout()
+
     gt_states = []
     ekf_states = []
 
@@ -141,20 +144,26 @@ def test_duckietown_ekf_slam(*args, **kwargs):
 
     planner.initialize(t0=0, p0=d0, s0=s0)
 
-    dt = 1/30
+    
 
     def animate(i):
         global u, robot_dp, robot_ddp, pos_s, pos_d, state, observations
 
+        dt = 1/30
+
+        u *= np.r_[0.6988, 0.4455]
+
         obs, reward, done, info = env.step(u)
 
-        controls = np.array(info['Simulator']['action'])
+        actual_u = np.array(info['Simulator']['action'])
 
-        # u = controls*np.r_[0.6988, 0.4455]
+        WHEEL_DIST = 0.102
+        RADIUS = 0.0318
+        u = np.array([RADIUS/2 * (actual_u[1]+actual_u[0]), RADIUS/WHEEL_DIST * (actual_u[1]-actual_u[0])])/dt
 
         robot_p, robot_dp = robot.step(u=u, dt=dt)
 
-        ekf.step(controls = u * dt, observations = observations)
+        ekf.step(controls = u*dt, observations = observations)
 
         line_found, trajectory, observations = lateral_lane_filter.process(obs)
 
@@ -201,5 +210,6 @@ def test_duckietown_ekf_slam(*args, **kwargs):
         env.render()
 
         return [im, im2, im5, im4, im1, im3]
-    ani = animation.FuncAnimation(fig, animate, frames=500, interval=20, blit=True)
+    ani = animation.FuncAnimation(fig, animate, frames=2100, interval=20, blit=True)
+    # ani.save("./images/duckietown_video/dt_ekf.mp4", writer="ffmpeg")
     plt.show()

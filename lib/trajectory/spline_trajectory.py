@@ -27,9 +27,8 @@ class Spline():
         # calc coefficient c
         A = self.__calc_A(h)
         B = self.__calc_B(h)
-        self.c = np.linalg.solve(A, B)
-        #  print(self.c1)
 
+        self.c = np.linalg.solve(A, B)
         # calc spline coefficient b and d
         for i in range(self.nx - 1):
             self.d.append((self.c[i + 1] - self.c[i]) / (3.0 * h[i]))
@@ -37,15 +36,17 @@ class Spline():
                 (self.c[i + 1] + 2.0 * self.c[i]) / 3.0
             self.b.append(tb)
 
+
+
+
     def calc(self, t):
         """
         Calc position
         if t is outside of the input x, return None
         """
-
         if t < self.x[0]:
             return self.x[0]
-        elif t > self.x[-1]:
+        elif t >= self.x[-1]:
             return self.x[-1]
 
         i = self.__search_index(t)
@@ -63,7 +64,7 @@ class Spline():
 
         if t < self.x[0]:
             return self.x[0]
-        elif t > self.x[-1]:
+        elif t >= self.x[-1]:
             return self.x[-1]
 
         i = self.__search_index(t)
@@ -78,7 +79,7 @@ class Spline():
     
         if t < self.x[0]:
             return self.x[0]
-        elif t > self.x[-1]:
+        elif t >= self.x[-1]:
             return self.x[-1]
 
         i = self.__search_index(t)
@@ -188,6 +189,58 @@ class SplineTrajectory2D(Trajectory, DifferentiableFunction):
         return yaw
 
 
+class SplineTrajectory1D(Trajectory, DifferentiableFunction):
+#class SplineTrajectory():
+    """
+    Cubic Spline class
+    """
+
+    def __init__(self, x, y):
+        self.s = Spline(x, y)
+
+    def compute_pt(self, x):
+        """
+        calc position
+        """
+        y = self.s.calc(x)
+        return np.array([x, y])
+    
+    def compute_first_derivative(self,x):
+        dy = self.s.calcd(x)
+        return np.array([1, dy])
+    
+    def compute_second_derivative(self,x):
+        # ddx = self.sx.calcdd(s)
+        ddy = self.s.calcdd(x)
+        return np.array([0, ddy]) 
+    
+    def compute_third_derivative(self,s):
+        logger.error('Function not yet implemented')
+        return np.array([0.0, 0.0])
+
+    def compute_curvature(self, x):
+        """
+        calc curvature
+        """
+        dx, dy = self.compute_first_derivative(x)
+        ddx, ddy = self.compute_second_derivative(x)
+        # if dx == ddx == dy == ddy == 0:
+        #     return 0
+        k = (ddy * dx - ddx * dy) / (dx ** 2 + dy ** 2)
+        return k
+        
+
+    def calc_yaw(self, x):
+        """
+        calc yaw
+        """
+        dx = 1
+        dy = self.s.calcd(x)
+        yaw = math.atan2(dy, dx)
+        return yaw
+       
+
+
 def calc_spline_course(x, y, ds=0.1):
     sp = Spline2D(x, y)
     s = list(np.arange(0, sp.s[-1], ds))
@@ -206,19 +259,20 @@ def calc_spline_course(x, y, ds=0.1):
 def main():
     print("Spline 2D test")
     import matplotlib.pyplot as plt
-    x = [0.0, 2.5, 5.0, 7.5, -3.0, 3.0]
-    y = [0.7, -6, 5, -9.5, 0.0, 5.0]
+    x = [0,1,2,3,4,5]
+    y = [0.0, 2.5, 5.0, 7.5, -3.0, 3.0]
 
-    sp = SplineTrajectory2D(x, y)
-    s = np.arange(0, sp.s[-1], 0.1)
+    sp = SplineTrajectory1D(x, y)
+    # sp = SplineTrajectory2D(x, y)
+    s = np.arange(0, 5, 0.01)
 
     rx, ry, ryaw, rk = [], [], [], []
-    for i_s in s:
-        ix, iy = sp.compute_pt(i_s)
+    for s_i in s:
+        ix,iy = sp.compute_pt(s_i)
         rx.append(ix)
         ry.append(iy)
-        ryaw.append(sp.calc_yaw(i_s))
-        rk.append(sp.compute_curvature(i_s))
+        ryaw.append(sp.calc_yaw(s_i))
+        rk.append(sp.compute_curvature(s_i))
 
     flg, ax = plt.subplots(1)
     plt.plot(x, y, "xb", label="input")
@@ -237,7 +291,7 @@ def main():
     plt.ylabel("yaw angle[deg]")
 
     flg, ax = plt.subplots(1)
-    plt.plot(s, rk, "-r", label="curvature")
+    plt.plot(rx, rk, "-r", label="curvature")
     plt.grid(True)
     plt.legend()
     plt.xlabel("line length[m]")
