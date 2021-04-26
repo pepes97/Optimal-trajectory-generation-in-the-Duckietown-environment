@@ -11,6 +11,7 @@ from ..video import *
 logger = logging.getLogger(__name__)
 
 IMAGE_PATH_LST = [f'./images/dt_samples/{i}.jpg' for i in range(0, 170)]
+#IMAGE_PATH_LST = [f'./images/dt_samples/{i}.jpg' for i in range(8, 9)]
 
 OBJ_COLOR_DICT = {
     ObjectType.UNKNOWN: (0, 128, 128),      # medium dark turquoise
@@ -58,6 +59,7 @@ def test_semantic_mapper(*args, **kwargs):
         object_dict, pfit, feat_dict  = semantic_mapper.process(segment_dict)
         for obj_lst in object_dict.values():
             for object in obj_lst:
+                #print(f'id={object["class"]}, center={object["center"]}, area={object["area"]}, eigs={object["eigs"]}')
                 cv2.drawContours(pframe, object['contour'], -1, OBJ_COLOR_DICT[object['class']], 3)
         if pfit is not None:
             ploty = np.arange(0, wframe.shape[0]-1, 1)

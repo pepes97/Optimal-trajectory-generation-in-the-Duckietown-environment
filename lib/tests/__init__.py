@@ -17,6 +17,7 @@ from .test_moving_obstacle_planner import test_planner_moving_obstacle
 from .test_video_lane import test_video_lane, test_video_lane_obstacles
 from .test_dt import test_duckietown
 from .test_semantic_mapper import test_semantic_mapper, test_semantic_mapper_video, test_ransac
+from .test_obstacle_tracker import *
 from .test_dt_planner import test_duckietown_planner
 from .test_ekf_slam import test_ekf_slam
 from .test_dt_ekf_slam import test_duckietown_ekf_slam
