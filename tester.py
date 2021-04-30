@@ -27,7 +27,6 @@ TEST_MAP = {
     'plot_unicycle' : test_plot_unicycle,
     'plot_planner'  : test_plot_planner,
     'obstacles' : test_obstacles_moving,
-    'planner': test_planner,
     'planner_full': test_planner_full,
     'planner_obstacles': test_planner_obstacle,
     'planner_moving_obstacles': test_planner_moving_obstacle,
@@ -40,7 +39,11 @@ TEST_MAP = {
     'obstacle_tracker': test_obstacle_tracker,
     'duckietown_planner': test_duckietown_planner,
     'ekf_slam': test_ekf_slam,
-    'dt_ekf_slam': test_duckietown_ekf_slam
+    'dt_ekf_slam': test_duckietown_ekf_slam, 
+    'dt_mapper':test_mapper_planner,
+    'dt_mapper_semantic':test_mapper_semantic_planner, 
+    'dt_obstacles': test_mapper_semantic_planner_obstacles, 
+    'plot_optimal': test_optimal_frenet
 }
 
 def handle_parser(args):
@@ -69,6 +72,11 @@ if __name__ == '__main__':
     parser.add_argument('--print', '-p', help='Print flag', action='store_true')
     parser.add_argument('--save-plot', help='Path and extension of the plot image', type=str)
     parser.add_argument('--config', '-c', type=str, help='Simulation configuration file')
+    parser.add_argument('--stop', '-st', help='Store flag', action='store_true')
+    parser.add_argument('--merge', '-m', help='Merge flag', action='store_true')
+    parser.add_argument('--follow', '-f', help='Follow flag', action='store_true')
+    parser.add_argument('--single', '-sing', help='Single plot flag', action='store_true')
+
     try:
         args = parser.parse_args()
     except:
@@ -91,9 +99,17 @@ if __name__ == '__main__':
     print(f'{bcolors.OKGREEN}Launching test for {args.test}{bcolors.ENDC}')
     config_args = config_obj.__dict__ if config_obj is not None else None
     if config_args is None:
-        result = TEST_MAP[args.test](plot=args.print, store_plot=args.save_plot)
+        if args.stop:
+            result = TEST_MAP[args.test](plot=args.print, store_plot=args.save_plot, stop=args.stop, single = args.single)
+        elif args.merge:
+            result = TEST_MAP[args.test](plot=args.print, store_plot=args.save_plot, merge=args.merge,single = args.single)
+        elif args.follow:
+            result = TEST_MAP[args.test](plot=args.print, store_plot=args.save_plot, follow=args.follow,single = args.single)
+        else:
+            result = TEST_MAP[args.test](plot=args.print, store_plot=args.save_plot, single= args.single)
     else:
         result = TEST_MAP[args.test](**config_args, plot=args.print, store_plot=args.save_plot)
+    
     if result is not None:
         # Process results
         # Store results

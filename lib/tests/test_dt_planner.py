@@ -15,8 +15,27 @@ from numpy import arange
 from ..video import *
 from ..controller import FrenetIOLController
 from ..planner import *
+from ..transform import FrenetDKTransform
+from ..platform import Unicycle
 
-u = np.array([0.5, 0.0])
+def frenet_to_glob(trajectory, planner, projection):
+    frenet_path = planner.opt_path_tot
+    path = []
+    for i in range(len(frenet_path.s)):
+        s = projection + (frenet_path.s[i] - planner.s0[0])
+        d = frenet_path.d[i] 
+        target_pos = trajectory.compute_pt(s) + \
+            compute_ortogonal_vect(trajectory, s) * d
+        path.append(target_pos)
+    path = np.array(path)
+    return path
+
+def compute_ortogonal_vect(trajectory, s):
+    ds = 1/30
+    s1 = s + ds
+    t_grad = trajectory.compute_pt(s1) - trajectory.compute_pt(s)
+    t_r = np.arctan2(t_grad[1], t_grad[0])
+    return np.array([-np.sin(t_r), np.cos(t_r)])
 
 def test_duckietown_planner(*args, **kwargs):
     env = DuckietownEnv(seed=123,
@@ -26,18 +45,17 @@ def test_duckietown_planner(*args, **kwargs):
     # Lines
     perspective_projector = PerspectiveWarper()
     line_filter = CenterLineFilter()
-    line_tracker = SlidingWindowTracker(robust_factor=1)
-    middle_lane_filter = MiddleLineFilter(perspective_projector, line_filter, line_tracker)
     lat_line_filter = LateralLineFilter()
     lat_line_tracker = SlidingWindowDoubleTracker(robust_factor=1)
+    transformer = FrenetDKTransform()
+    # Segmentator 
+    segmentator     = Segmentator()
+    # Semantic Mapper 
+    red_line_filter      = RedFilter()
+    semantic_mapper = SemanticMapper()
     lateral_lane_filter = TrajectoryFilter(perspective_projector, line_filter, lat_line_filter, lat_line_tracker)
     # Controller
-    controller = FrenetIOLController(.5, 0.0, 30, 0.0, 0.0)
-    # Planner 
-    planner = TrajectoryPlannerV1DT(TrajectoryPlannerParamsDT())
-    s0 = (0.0, 0.0, 0.0)
-    d0 = (0.0, 0.0, 0.0)
-    planner.initialize(t0=0, p0=d0, s0=s0)
+    controller = FrenetIOLController(.5, 0.0, 27, 0.0, 0.0)
     # Plot 
     fig, ax = plt.subplots(1, 2)
     env.reset()
@@ -47,64 +65,60 @@ def test_duckietown_planner(*args, **kwargs):
     im2 = ax[1].imshow(obs)
     curve_line, = ax[0].plot([], [], 'r')
     curve_unwarped_line, = ax[1].plot([], [], 'r')
-    #scat = ax[1].scatter(0.0,0.0, c='y')
+    # Planner 
+    planner = TrajectoryPlannerV1DT(TrajectoryPlannerParamsDT())
+    global u, robot_p, robot_dp, robot_ddp, pos_s, pos_d
+    robot = Unicycle()
+    robot.set_initial_pose(robot.p)
+    robot_p = np.zeros(3)
+    robot_dp = np.zeros(3)
+    robot_ddp = np.zeros(3)
+    u = np.zeros(2)
+    # Initialization
+    line_found, trajectory, observations = lateral_lane_filter.process(obs)
+    est_pt = transformer.estimatePosition(trajectory, robot_p)
+    # Robot pose in frenet
+    robot_fpose = transformer.transform(robot_p)
+    
+    pos_s = s0 = (robot_fpose[0], 0.0, 0.0)
+    pos_d = d0 = (robot_fpose[1], 0.0, 0.0)
+
+    planner.initialize(t0=0, p0=d0, s0=s0)
+    dt = 1/60
 
     def animate(i):
-        global u
+        global u, robot_p, robot_dp, robot_ddp, pos_s, pos_d
+        
         obs, reward, done, info = env.step(u)
-        #line_found, cpose, curv,a,b,c = lateral_lane_filter.process(obs)
-        line_found, cpose, curv = lateral_lane_filter.process(obs)
-        # f = lambda x: int(a*x**2 + b*x + c)
-        # df = lambda x: int(2*a*x + b)
+        actual_u = np.array(info['Simulator']['action'])
+        robot_p, robot_dp = robot.step(actual_u, dt)
+        line_found, trajectory, observations = lateral_lane_filter.process(obs)
+
         if line_found:
-            robot_fpose = np.array([0.0, cpose[0], cpose[1]])
-            pos_s, pos_d = planner.replanner(i)
-            ts, td = pos_s[0], pos_d[0]
-            #target_pos = ts + compute_ortogonal_vect(df, np.array([f(ts), ts])) * td
-            #print(f'target_pos{target_pos}')
-            # Compute error
+            # Estimate frenet frame
+            robot_p = np.array([0.1,0.0,0.0])
+            est_pt = transformer.estimatePosition(trajectory,  robot_p)
+            # Robot pose in frenet
+            robot_fpose = transformer.transform(robot_p)
+            # Get replanner step
+            pos_s, pos_d = planner.replanner(time = i*dt)
+            lateral_lane_filter.proj_planner = trajectory.compute_pt(est_pt)
+            lateral_lane_filter.path_planner = frenet_to_glob(trajectory, planner, est_pt)
+            #Compute error
             error = np.array([0, pos_d[0]]) - robot_fpose[0:2]
             derror = np.array([pos_s[1], pos_d[1]])
-            curvature = curv
-            print(f'curvature{curvature}')
+            # Get curvature
+            curvature = trajectory.compute_curvature(est_pt)
+            # Compute control
             u = controller.compute(robot_fpose, error, derror, curvature)
-            u = u / np.linalg.norm(u)
-            u[1] *= -1
-            print(f'fpose={robot_fpose}, u={u}')
-            
-        """
-        warped_frame = perspective_projector.warp(obs)
-        thresholded_frame = line_filter.process(warped_frame)
-        out_image, line_fit = line_tracker.search(thresholded_frame, draw_windows=True)
-        if (line_fit != np.zeros(3)).all():
-            # Line is found
-            # plot line
-            ploty = np.arange(0, warped_frame.shape[0]-1, 1)
-            line_fit = line_fit[0] * ploty**2 + line_fit[1] * ploty + line_fit[2]
-            curve_line.set_xdata(line_fit)
-            curve_line.set_ydata(ploty)
-            # Unwarp points of the line
-            line_unwarped = np.expand_dims(np.vstack((line_fit, ploty)), axis=1)
-            line_unwarped = np.transpose(line_unwarped, (2, 1, 0))
-            line_unwarped = cv2.perspectiveTransform(line_unwarped, perspective_projector.iM)
-            curve_unwarped_line.set_xdata(line_unwarped[:, 0, 0])
-            curve_unwarped_line.set_ydata(line_unwarped[:, 0, 1])
-        else:
-            curve_line.set_xdata([])
-            curve_line.set_ydata([])
-            curve_unwarped_line.set_xdata([])
-            curve_unwarped_line.set_ydata([])
-        """
+            # if np.linalg.norm(u) != 0: 
+            #     u = u / np.linalg.norm(u)            
+            # print(f'fpose={robot_fpose}, u={u}')        
+
         im.set_array(lateral_lane_filter.plot_image)
         im2.set_array(obs)
-        #scat.set_offsets(target_pos)
         env.render()
         return [im, im2, curve_line, curve_unwarped_line]
-        # return [im, im2, curve_line, curve_unwarped_line, scat]
     ani = animation.FuncAnimation(fig, animate, frames=500, interval=50, blit=True)
+    #ani.save("./prova.mp4", writer="ffmpeg")
     plt.show()
-    
-def compute_ortogonal_vect(df, s):
-    t_grad = np.array([df(s[0]), df(s[1])])
-    t_r = np.arctan2(t_grad[1], t_grad[0])
-    return np.array([-np.sin(t_r), np.cos(t_r)])

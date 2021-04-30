@@ -10,109 +10,11 @@ from .config import DefaultSimulationParameters as dsp
 
 from ..logger import SimulationDataStorage, SimData, timeprofiledecorator
 from ..trajectory import QuinticTrajectory2D, CircleTrajectory2D, SplineTrajectory2D
-from ..transform import FrenetGNTransform
+from ..transform import FrenetGNTransformOld
 from ..controller import FrenetIOLController
 from ..plotter import *
 
 logger=logging.getLogger(__name__)
-
-def test_planner(*args, **kwargs):
-    plot_flag = False
-    store_plot = None
-    if 'plot' in kwargs:
-        plot_flag = kwargs['plot']
-    if 'store_plot' in kwargs:
-        store_plot = kwargs['store_plot']
-    
-    sim_config = SimulationConfiguration(**kwargs)
-    # Extract key objects from configuration object
-    sim_config.controller = FrenetIOLController(.1, 0.0, 6, 0.0, 0.0)
-    t_vect, robot, trajectory, transformer, controller, planner = sim_config.get_elements()
-    # Configure SimulationDataStorage
-    data_storage = SimulationDataStorage(t_vect)
-    data_storage.add_argument(SimData.robot_pose)
-    data_storage.add_argument(SimData.robot_frenet_pose)
-    data_storage.add_argument(SimData.control)
-    data_storage.add_argument(SimData.trajectory_2d)
-    data_storage.add_argument(SimData.target_pos)
-    data_storage.add_argument('error', 2)
-    data_storage.add_argument('derror', 2)
-
-    data_storage = __simulate_experiment(sim_config, data_storage, trajectory,
-                                        robot, transformer, controller, planner)
-
-    def __plot_fn(store: str=None):
-        fig = plot_2d_simulation(data_storage)
-        if store is not None:
-            # TODO (generate path inside images/<timeoftheday>/store:str)
-            plt.savefig(store)
-        plt.show()
-    if plot_flag:
-        __plot_fn(store_plot)
-    return data_storage
-
-def _simulate_experiment(sim_config, data_storage, trajectory, robot, transformer, controller, planner):
-    # Simulation loop
-    t_vect = sim_config.get_time_vect()
-    robot_p = robot.p
-
-    robot_dp = np.zeros(3)
-    robot_ddp = np.zeros(3)
-    u = np.zeros(2)
-
-    for i in range(sim_config.get_simulation_length()):
-        # Estimate frenet frame
-        est_pt = transformer.estimatePosition(trajectory, robot_p)
-        # Robot pose in frenet
-        robot_fpose = transformer.transform(robot_p)
-        # Robot velocity in frenet (need only p_dot and d_dot)
-        robot_fdp  = transformer.transform(robot_dp)[0:2]
-        # Robot acceleration in frenet 
-        robot_fddp  = transformer.transform(robot_ddp)[0:2]
-
-        # Compute error and derror
-        # target_pos = trajectory.compute_pt(t_vect[i])
-        # target_fpos = transformer.transform(target_pos)
-        # target_dpos = trajectory.compute_first_derivative(t_vect[i])
-        # target_fdpos = transformer.transform(target_dpos)
-        if i == 0:
-            s0 = (robot_fpose[0],robot_fdp[0],robot_fddp[0])
-            d0 = (robot_fpose[1],robot_fdp[1],robot_fddp[1])
-            planner.initialize(t0 = t_vect[i], p0 = d0, s0 = s0)
-            pos_s, pos_d = planner.s0, planner.p0
-        else:
-            pos_s, pos_d = planner.replanner(t_vect[i])
-        
-        target_pos = transformer.itransform(np.array([pos_s[0], pos_d[0]]))
-        target_fpos = np.array([pos_s[0], pos_d[0]])
-        target_fdpos = np.array([pos_s[1], pos_d[1]])
-        #error = target_fpos - robot_fpose[0:2]
-        error = -robot_fpose[:2]
-        
-        # Set error on s to 0 (TEST)
-        # error[0] = 0.0
-        #derror = target_fdpos - robot_fdp
-        t_fvel = np.array([pos_s[1], pos_d[1]])
-        
-        #print(pos_s, pos_d)
-        # Get path curvature at estimate
-        curvature = trajectory.compute_curvature(est_pt)
-        
-        # Compute control
-        u = controller.compute(robot_fpose, error, t_fvel, curvature)
-
-        # Step the unicycle
-        robot_p, robot_dp = robot.step(u, dsp.dt)
-
-        # log data
-        data_storage.set('robot_pose', robot_p, i)
-        data_storage.set('robot_frenet_pose', robot_fpose, i)
-        data_storage.set('control', u, i)
-        data_storage.set('trajectory', target_pos, i)
-        data_storage.set('target_pos', target_fpos, i)
-        data_storage.set('error', error, i)
-        data_storage.set('derror', derror, i)
-    return data_storage
 
 @timeprofiledecorator
 def __simulate_experiment(sim_config, data_storage, trajectory, robot, transformer, controller, planner):
@@ -151,6 +53,8 @@ def __simulate_experiment(sim_config, data_storage, trajectory, robot, transform
         error = np.array([0, pos_d[0]]) - robot_fpose[0:2]
         derror = np.array([pos_s[1], pos_d[1]])
         # Print check
+        v_planner = np.array([pos_s[1],pos_d[1]])
+        v_xy = transformer.itransform(v_planner)
         logger.info(f'Planner s, d:{ts, td}')
         logger.info(f'Robot s,d :{robot_fpose[:2]}')
         logger.info(f'Error:{error}')
@@ -158,6 +62,8 @@ def __simulate_experiment(sim_config, data_storage, trajectory, robot, transform
         curvature = trajectory.compute_curvature(est_pt)
         # Compute control
         u = controller.compute(robot_fpose, error, derror, curvature)
+        # print(f"Planner s dot :{v_xy[0]} and d dot: {v_xy[1]}")
+        # print(f"Controller v: {u[0]} and omega: {u[1]}")
         # Step the unicycle
         robot_p, robot_dp = robot.step(u, dsp.dt)
         # log data
@@ -169,7 +75,6 @@ def __simulate_experiment(sim_config, data_storage, trajectory, robot, transform
         data_storage.set(SimData.derror, derror, i)
         data_storage.set(SimData.planner, target_pos, i)
         
-        
     return data_storage
 
 
@@ -180,7 +85,8 @@ def test_planner_full(*args, **kwargs):
         plot_flag = kwargs['plot']
     if 'store_plot' in kwargs:
         store_plot = kwargs['store_plot']
-
+    
+    plot_velocities = True
     sim_config = SimulationConfiguration(**kwargs)
     # Extract key objects from configuration object
     sim_config.controller = FrenetIOLController(.5, 0.0, 5, 0.0, 0.0)
@@ -221,11 +127,31 @@ def test_planner_full(*args, **kwargs):
             planner_line.set_xdata(planner_path[0, i:i+30])
             planner_line.set_ydata(planner_path[1, i:i+30])
             return [unicycle_poly, planner_line]
-        ani = animation.FuncAnimation(fig, animate, frames=t_vect.shape[0], interval=30, blit=False)
+        ani = animation.FuncAnimation(fig, animate, frames=t_vect.shape[0], interval=30, blit=True, repeat = False)
+        #ani.save("./planner_full.gif")
         if store is not None:
             # TODO (generate path inside images/<timeoftheday>/store:str)
             ani.save(store)
         plt.show()
+
+    def __plot_vel(store: str=None):
+        fig, ax = plt.subplots(1,1, figsize= (15,15))
+        # Plot control outputs
+        t = np.arange(0.1, 50, 0.1)
+        u = data_storage.get(SimData.control)
+        line, = ax.plot(t,u[0, :], color = "r", label='v')
+        line2, = ax.plot(t,u[1, :], color = "g", label='$\omega$')
+        # line, = ax.plot(u[0, :230], color = "r", label='v')
+        # line2, = ax.plot(u[1, :230], color = "g", label='$\omega$')
+        ax.legend([r"$v$", r"$\omega$"])
+        ax.set_xlabel(r"$t$")
+        ax.set_ylabel(r"$u$")
+        ax.grid(True)
+        plt.savefig("./images/velocities/prova_vel.png")
+        plt.show()
+
     if plot_flag:
         __plot_fn(store_plot)
+    if plot_velocities:
+        __plot_vel(store_plot)
     return data_storage

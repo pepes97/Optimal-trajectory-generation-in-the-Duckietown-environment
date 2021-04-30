@@ -12,10 +12,11 @@ import pyglet
 import sys
 from ..video import *
 from ..controller import FrenetIOLController
-
+from ..planner import *
 from ..localization import EKF_SLAM
 from ..localization import *
-
+from ..platform import Unicycle
+from ..transform import FrenetDKTransform
 
 
 class PerspectiveWarper:
@@ -64,6 +65,26 @@ def transition(state: np.ndarray = np.zeros((ROBOT_DIM,)), \
     next_state[2] = np.arctan2(np.sin(th),np.cos(th))
     return next_state
 
+
+def frenet_to_glob(trajectory, planner, projection):
+    frenet_path = planner.opt_path_tot
+    path = []
+    for i in range(len(frenet_path.s)):
+        s = projection + (frenet_path.s[i] - planner.s0[0])
+        d = frenet_path.d[i] 
+        target_pos = trajectory.compute_pt(s) + \
+            compute_ortogonal_vect(trajectory, s) * d
+        path.append(target_pos)
+    path = np.array(path)
+    return path
+
+def compute_ortogonal_vect(trajectory, s):
+    ds = 1/30
+    s1 = s + ds
+    t_grad = trajectory.compute_pt(s1) - trajectory.compute_pt(s)
+    t_r = np.arctan2(t_grad[1], t_grad[0])
+    return np.array([-np.sin(t_r), np.cos(t_r)])
+
 def test_duckietown_ekf_slam(*args, **kwargs):
 
     ekf = EKF_SLAM()
@@ -75,63 +96,109 @@ def test_duckietown_ekf_slam(*args, **kwargs):
     line_filter = CenterLineFilter()
     line_tracker = SlidingWindowTracker(robust_factor=1)
     lat_line_filter = LateralLineFilter()
+    transformer = FrenetDKTransform()
     lat_line_tracker = SlidingWindowDoubleTracker(robust_factor=1)
     lateral_lane_filter = TrajectoryFilter(perspective_projector, line_filter, lat_line_filter, lat_line_tracker)
-    controller = FrenetIOLController(.5, 0.0, 30, 0.0, 0.0)
+    controller = FrenetIOLController(.5, 0.0, 27, 0.0, 0.0)
     fig, ax = plt.subplots(1, 3)
     env.reset()
     env.render()
     obs, *_ = env.step(np.array([0.0, 0.0]))
     im = ax[0].imshow(obs)
     im2 = ax[1].imshow(obs)
-    im1, = ax[2].plot([], [], 'b-') # estimate path
-    im3, = ax[2].plot([], [], 'bo') # estimate current position
-    im4, = ax[2].plot([], [], 'rx') # estimate landmarks
+    im1, = ax[2].plot([], [], 'b-') # estimated path
+    im3, = ax[2].plot([], [], 'bo') # estimated current position
+    im4, = ax[2].plot([], [], 'rx') # estimated landmarks
     im5, = ax[2].plot([], [], 'g-') # odometry only path
 
-    ax[2].set_xlim(-1,2)
-    ax[2].set_ylim(-1,2)
-    
+    ax[2].set_xlim(-2,3)
+    ax[2].set_ylim(-2,3)
+    ax[2].set_aspect('equal', 'box')
+
+    fig.tight_layout()
+
     gt_states = []
     ekf_states = []
 
     global u, state, observations
 
-    u = np.array([0.0, 0.0])
     observations = np.array([]).reshape(0,2)
-    state = np.zeros((3,))
+    state = np.zeros((3,))        
+ 
+    planner = TrajectoryPlannerV1DT(TrajectoryPlannerParamsDT())
+    global u, robot_p, robot_dp, robot_ddp, pos_s, pos_d
+    robot = Unicycle()
+    robot.set_initial_pose(robot.p)
+    robot_p = np.zeros(3)
+    robot_dp = np.zeros(3)
+    robot_ddp = np.zeros(3)
+    u = np.zeros(2)
+    # Initialization
+    line_found, trajectory, observations = lateral_lane_filter.process(obs)
+    est_pt = transformer.estimatePosition(trajectory, robot_p)
+    # Robot pose in frenet
+    robot_fpose = transformer.transform(robot_p)
+    
+    pos_s = s0 = (robot_fpose[0], 0.0, 0.0)
+    pos_d = d0 = (robot_fpose[1], 0.0, 0.0)
+
+    planner.initialize(t0=0, p0=d0, s0=s0)
+
+    
 
     def animate(i):
-        
-        global u, state, observations
+        global u, robot_dp, robot_ddp, pos_s, pos_d, state, observations
 
-        obs, _, _, info = env.step(u)
+        dt = 1/30
 
-        # PROBLEM
-        controls = np.array(info['Simulator']['action'],dtype=np.float32) * DT
+        u *= np.r_[0.6988, 0.4455]
 
-        # PROBLEM
-        controls = u * DT
+        obs, reward, done, info = env.step(u)
 
-        ekf.step(controls = controls, observations = observations)
+        actual_u = np.array(info['Simulator']['action'])
 
-        state = transition(state = state, controls = controls)
+        WHEEL_DIST = 0.102
+        RADIUS = 0.0318
+        u = np.array([RADIUS/2 * (actual_u[1]+actual_u[0]), RADIUS/WHEEL_DIST * (actual_u[1]-actual_u[0])])/dt
 
-        line_found, cpose, curv, observations = lateral_lane_filter.process(obs)
+        robot_p, robot_dp = robot.step(u=u, dt=dt)
+
+        ekf.step(controls = u*dt, observations = observations)
+
+        line_found, trajectory, observations = lateral_lane_filter.process(obs)
 
         if line_found:
-            robot_fpose = np.array([0.0, cpose[0], cpose[1]])
-            error = np.array([0, 0.0]) - robot_fpose[:2]
-            t_fvel = np.array([1, 0.0])
-            curvature = curv
-            u = controller.compute(robot_fpose, error, t_fvel, curvature)
-            u = u / np.linalg.norm(u)
-            u[1] *= -1
+            # Estimate frenet frame
+            robot_b = np.array([0.1,0.0,0.0])
+            est_pt = transformer.estimatePosition(trajectory,  robot_b)
+            # Robot pose in frenet
+            robot_fpose = transformer.transform(robot_b)
+            # Get replanner step
+    
+            planner.p0=(robot_fpose[1],planner.p0[1],planner.p0[2]) # this is just to avoid blue trajectory to converge immediately
+            pos_s, pos_d = planner.replanner(time = i*dt)
+
+            lateral_lane_filter.proj_planner = trajectory.compute_pt(est_pt)
+            lateral_lane_filter.path_planner = frenet_to_glob(trajectory, planner, est_pt)
+
+            #Compute error
+            error = np.array([0, pos_d[0]]) - robot_fpose[0:2]
+            derror = np.array([pos_s[1], pos_d[1]])
+            # Get curvature
+            curvature = trajectory.compute_curvature(est_pt)
+            # Compute control
+            u = controller.compute(robot_fpose, error, derror, curvature)
+            # if np.linalg.norm(u) != 0: 
+            #     u = u / np.linalg.norm(u)
+            # Step the unicycle            
+            # u = controller.compute(robot_fpose, error, derror, curvature)/np.r_[0.6988, 0.4455]
+            
+            # print(f'fpose={robot_fpose}, u={u}') 
 
         mu_robot = ekf.mu[:ROBOT_DIM-1].reshape(-1,2)
         mu_landmarks = ekf.mu[ROBOT_DIM:].reshape(-1,2)
         ekf_states.append(mu_robot)
-        gt_states.append(state)
+        gt_states.append(robot_p[:2].copy())
         gt_states_array = np.stack(gt_states)
         ekf_states_array = np.concatenate(ekf_states,axis=0)
         im.set_array(lateral_lane_filter.plot_image)
@@ -143,5 +210,6 @@ def test_duckietown_ekf_slam(*args, **kwargs):
         env.render()
 
         return [im, im2, im5, im4, im1, im3]
-    ani = animation.FuncAnimation(fig, animate, frames=500, interval=20, blit=True)
+    ani = animation.FuncAnimation(fig, animate, frames=2100, interval=20, blit=True)
+    # ani.save("./images/duckietown_video/dt_ekf.mp4", writer="ffmpeg")
     plt.show()

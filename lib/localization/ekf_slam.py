@@ -6,12 +6,12 @@ CONTROL_DIM = 2 # [dp, dth] in R2
 OBSERV_DIM = 2 # [x, y] in R2
 ASSOCIATION_DIM = 3 # [h, z, a_hz] in R3
 NOISE_U = 0.1 # control noise constant part
-NOISE_Z = 0.01 # measurement noise constant part
-NOISE_L = 2.0 # new landmark initial noise
+NOISE_Z = 0.1 # measurement noise constant part
+NOISE_L = 0.1 # new landmark initial noise
 # yellow dashes are spaced 1 [inch] = 2,54 [cm]
 GATING_TAU = 0.0254 # omega L2 distance gating tau
 LONELY_GAMMA = 1e-4 # lonely best friend threshold
-FRAME_RATE = 60 # [1/s]
+FRAME_RATE = 30 # [1/s]
 DT = 1/FRAME_RATE # [s] env time interval
 VERBOSE = True # full debug
 
@@ -89,7 +89,8 @@ class EKF_SLAM():
         # predict sigma
         self.sigma = A @ self.sigma @ A.T + B @ sigma_uu @ B.T
 
-    def measure(self, landmark_position: np.ndarray = np.zeros((LANDMARK_DIM,1),dtype=np.float32), landmark_index: int = 0):
+    def measure(self, landmark_position: np.ndarray = np.zeros((LANDMARK_DIM,1),dtype=np.float32), \
+                    landmark_index: int = 0) -> (np.ndarray, np.ndarray):
         # compute the measurement function
         # for a distance based measurement
         state_dim = self.mu.shape[0]
@@ -111,7 +112,7 @@ class EKF_SLAM():
         C[:,landmark_index:landmark_index+2] = RT
         return h, C
     
-    def measures_noise(self, C: np.ndarray = np.identity(OBSERV_DIM,dtype=np.float32)):
+    def measures_noise(self, C: np.ndarray = np.identity(OBSERV_DIM,dtype=np.float32)) -> np.ndarray:
         # model noise on measurements and return information matrix
         sigma_z = np.identity(2,dtype=np.float32) * NOISE_Z
         sigma_mn = C @ self.sigma @ C.T + sigma_z
@@ -120,7 +121,7 @@ class EKF_SLAM():
         return omega_mn
 
     def cost_matrix(self, landmarks: np.ndarray = np.zeros((1,LANDMARK_DIM),dtype=np.float32), \
-                    observations: np.ndarray = np.zeros((1,OBSERV_DIM),dtype=np.float32)):
+                    observations: np.ndarray = np.zeros((1,OBSERV_DIM),dtype=np.float32)) -> np.ndarray:
         # cost matrix is A is (M x N)
         # get number of landmarks and new observations
         m_dim = observations.shape[0]
@@ -146,7 +147,7 @@ class EKF_SLAM():
                 A[m,n] = (z - h).T @ omega_mn @ (z - h)
         return A
 
-    def gating(self,  A: np.ndarray = np.eye(1,2,dtype=np.float32)):
+    def gating(self,  A: np.ndarray = np.eye(1,2,dtype=np.float32)) -> (np.ndarray, np.ndarray):
         # Gating: ignore all
         # associations whose cost is
         # higher than a threshold
@@ -169,7 +170,7 @@ class EKF_SLAM():
         return associations, new_indices
 
     def best_friend(self, associations: np.ndarray = np.zeros((1,ASSOCIATION_DIM),dtype=np.float32), \
-                    A: np.ndarray = np.identity(2,dtype=np.float32)):
+                    A: np.ndarray = np.identity(2,dtype=np.float32)) -> (np.ndarray, np.ndarray):
         # Best friends: an association should be the best (i.e. minimum) of
         # both row and column landmark in the state
         if associations.shape[0] == 0 : return np.array([]).reshape(0,ASSOCIATION_DIM), np.array([])
@@ -189,7 +190,7 @@ class EKF_SLAM():
         return associations, pruned
 
     def lonely_best_friend(self,associations: np.ndarray = np.zeros((1,ASSOCIATION_DIM),dtype=np.float32), \
-                    A: np.ndarray = np.identity(2,dtype=np.float32)):
+                    A: np.ndarray = np.identity(2,dtype=np.float32)) -> (np.ndarray, np.ndarray):
         # Lonely best friends: one measurement should be
         # only assigned to one single landmark.
         if associations.shape[0] == 0 : return np.array([]).reshape(0,ASSOCIATION_DIM), np.array([])
@@ -208,7 +209,7 @@ class EKF_SLAM():
         pruned = np.take(m, indices, axis=0)
         return associations, pruned
         
-    def prune_heuristics(self, A: np.ndarray = np.identity(2,dtype=np.float32)):
+    def prune_heuristics(self, A: np.ndarray = np.identity(2,dtype=np.float32)) -> (np.ndarray, np.ndarray, np.ndarray):
         # Bad associations are EVIL. To avoid the above cases
         # we can use three heuristics
         # 1. Gating
@@ -223,7 +224,7 @@ class EKF_SLAM():
         return associations, new_indices, doubtful_indices
 
     def associate(self, landmarks: np.ndarray = np.zeros((1,LANDMARK_DIM),dtype=np.float32), \
-                    observations: np.ndarray = np.zeros((1,OBSERV_DIM),dtype=np.float32)):
+                    observations: np.ndarray = np.zeros((1,OBSERV_DIM),dtype=np.float32)) -> (np.ndarray, np.ndarray, np.ndarray):
         # with a greedy algorithm compute Omega L2 Norm cost matrix
         A = self.cost_matrix(landmarks = landmarks, observations = observations)
         # use heuristics to avoid bad associations

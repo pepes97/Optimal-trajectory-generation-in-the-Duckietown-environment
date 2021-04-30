@@ -5,7 +5,7 @@ import numpy as np
 import logging
 from ..platform import Unicycle
 from ..trajectory import Trajectory, QuinticTrajectory2D
-from ..transform import FrenetTransform, FrenetGNTransform
+from ..transform import FrenetTransform, FrenetGNTransform, FrenetGNTransformOld
 from ..controller import Controller, FrenetIOLController
 from ..planner import Planner, TrajectoryPlannerV1
 from ..planner import TrajectoryPlannerParams
@@ -117,7 +117,7 @@ class SimulationConfiguration:
 
     def get_transformer(self) -> FrenetTransform:
         if self.transformer is None:
-            return FrenetGNTransform()
+            return FrenetGNTransformOld()
         else:
             return self.transformer
         
