@@ -155,7 +155,7 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
     # transformer 
     transformer = FrenetDKTransform()
     # Controller
-    controller = FrenetIOLController(.5, 0.0, 27, 0.0, 0.0)
+    controller = FrenetIOLController(.05, 0.0, 5, 0.0, 0.0)
     # Mapper
     mapper = MapperSemanticObstacles()
     # Env initialize
@@ -229,6 +229,9 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
             # Check paths that do not encounter obstacles
             paths_planner = check_paths(paths_planner, obstacles, robot_p, mapper, rw, lw)
             if obstacles!=[]:
+                # Try to avoid black magic errors while saving
+                if len(paths_planner) == 0:
+                    return [im1, im2, im3]
                 planner.opt_path_tot = min(paths_planner, key=attrgetter('ctot'))
             # Planner in mapper
             mapper.proj_planner = trajectory.compute_pt(est_pt)
@@ -256,7 +259,8 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
         return [im1, im2, im3]
     ani = animation.FuncAnimation(fig, animate, frames=1100, interval=50, blit=True, cache_frame_data= False)
     #writervideo = animation.FFMpegWriter(fps=30)
-    ani.save("./prova2.mp4", writer="ffmpeg")
+    #ani.save("./prova2.mp4", writer="ffmpeg")
+    ani.save('./images/duckietown_video/planner_with_obstacles_b05.mp4', writer="ffmpeg")
     #ani.save('./images/duckietown_video/planner_with_obstacles_7.mp4', writer="ffmpeg")
     #ani.save("./images/duckietown_video/planner_with_obstacles_3.mp4", writer="ffmpeg")
     #plt.show()
@@ -265,32 +269,33 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
     #Plot control outputs
     #len_tot = trajectory.get_len()
     #u = data_storage.get(SimData.control)
-    line, = ax[0].plot(t,all_v, color = "r", label='v',  linewidth=2)
-    line2, = ax[0].plot(t,all_omega, color = "g", label='$\omega$',  linewidth=2)
+    
+    #line, = ax[0].plot(t,all_v, color = "r", label='v',  linewidth=2)
+    #line2, = ax[0].plot(t,all_omega, color = "g", label='$\omega$',  linewidth=2)
     # line, = ax.plot(u[0, :230], color = "r", label='v')
     # line2, = ax.plot(u[1, :230], color = "g", label='$\omega$')
-    ax[0].set_title("Velocities at controller output with obstacles")
-    ax[0].legend([r"$v (m/s)$", r"$\omega (rad/s)$"])
-    ax[0].set_xlabel(r"$t (s)$")
-    ax[0].set_ylabel(r"$u$")
+    #ax[0].set_title("Velocities at controller output with obstacles")
+    #ax[0].legend([r"$v (m/s)$", r"$\omega (rad/s)$"])
+    #ax[0].set_xlabel(r"$t (s)$")
+    #ax[0].set_ylabel(r"$u$")
     #ax[0].set_xlim(-0.5,5)
-    ax[0].set_ylim(-6,9)
-    ax[0].set_aspect('equal', 'box')
-    ax[0].grid(True)
+    #ax[0].set_ylim(-6,9)
+    #ax[0].set_aspect('equal', 'box')
+    #ax[0].grid(True)
 
-    line3, = ax[1].plot(t,wheel_v, color = "r", label='v', linewidth=2)
-    line4, = ax[1].plot(t,wheel_omega, color = "g", label='$\omega$', linewidth=2)
+    #line3, = ax[1].plot(t,wheel_v, color = "r", label='v', linewidth=2)
+    #line4, = ax[1].plot(t,wheel_omega, color = "g", label='$\omega$', linewidth=2)
     # line, = ax.plot(u[0, :230], color = "r", label='v')
     # line2, = ax.plot(u[1, :230], color = "g", label='$\omega$')
-    ax[1].set_title("Velocities at robot input with obstacles")
-    ax[1].legend([r"$v (m/s)$", r"$\omega (rad/s)$"])
-    ax[1].set_xlabel(r"$t (s)$")
-    ax[1].set_ylabel(r"$u$")
+    #ax[1].set_title("Velocities at robot input with obstacles")
+    #ax[1].legend([r"$v (m/s)$", r"$\omega (rad/s)$"])
+    #ax[1].set_xlabel(r"$t (s)$")
+    #ax[1].set_ylabel(r"$u$")
     #ax[1].set_xlim(-0.5,5)
-    ax[1].set_ylim(-6,9)
-    ax[1].set_aspect('equal', 'box')
-    ax[1].grid(True)
-    plt.savefig("./images/velocities/final_obs_2.png")
-    plt.show()
+    #ax[1].set_ylim(-6,9)
+    #ax[1].set_aspect('equal', 'box')
+    #ax[1].grid(True)
+    #plt.savefig("./images/velocities/final_obs_2.png")
+    #plt.show()
     
 

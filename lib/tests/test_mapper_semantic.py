@@ -54,7 +54,7 @@ def test_mapper_semantic_planner(*args, **kwargs):
     # transformer 
     transformer = FrenetDKTransform()
     # Controller
-    controller = FrenetIOLController(.5, 0.0, 27, 0.0, 0.0)
+    controller = FrenetIOLController(.05, 0.0, 27, 0.0, 0.0)
     # Mapper
     mapper = MapperSemantic()
     # Env initialize
@@ -142,8 +142,8 @@ def test_mapper_semantic_planner(*args, **kwargs):
         env.render()
         return [im1, im2, im3]
     ani = animation.FuncAnimation(fig, animate, frames=1100, interval=50, blit=True)
-    ani.save("./prova.mp4", writer="ffmpeg")
-    #ani.save("./images/duckietown_video/planner_without_obstacles.gif")
+    #ani.save("./prova.mp4", writer="ffmpeg")
+    ani.save("./images/duckietown_video/planner_without_obstacles_b05.mp4")
     #plt.show()
     t = np.arange(0, 1102*(1/30), 1/30)
     fig, ax = plt.subplots(2,1, figsize= (15,15))
@@ -177,8 +177,8 @@ def test_mapper_semantic_planner(*args, **kwargs):
     ax[1].set_aspect('equal', 'box')
     ax[1].grid(True)
 
-    plt.savefig("./images/velocities/final_no_obs_2.png")
-    # plt.show()
+    #plt.savefig("./images/velocities/final_no_obs_2.png")
+    #plt.show()
     
     
 
