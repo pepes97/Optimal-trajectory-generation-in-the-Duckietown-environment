@@ -109,9 +109,9 @@ class SemanticMapper:
         # TODO
         # Fit yellow line if possible
         if obs:
-            thresh = 2
+            thresh = 6
         else:
-            thresh = 3
+            thresh = 6
         print(thresh)
         if len(object_dict[ObjectType.YELLOW_LINE]) < thresh:
             yellow_fit = None

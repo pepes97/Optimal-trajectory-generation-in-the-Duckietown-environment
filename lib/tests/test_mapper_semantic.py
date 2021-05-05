@@ -54,7 +54,7 @@ def test_mapper_semantic_planner(*args, **kwargs):
     # transformer 
     transformer = FrenetDKTransform()
     # Controller
-    controller = FrenetIOLController(.05, 0.0, 27, 0.0, 0.0)
+    controller = FrenetIOLController(.05, 0.0, 5, 0.0, 0.0)
     # Mapper
     mapper = MapperSemantic()
     # Env initialize
@@ -146,7 +146,7 @@ def test_mapper_semantic_planner(*args, **kwargs):
     ani.save("./images/duckietown_video/planner_without_obstacles_b05.mp4")
     #plt.show()
     t = np.arange(0, 1102*(1/30), 1/30)
-    fig, ax = plt.subplots(2,1, figsize= (15,15))
+    fig, ax = plt.subplots(2,1, figsize= (15,5))
     #Plot control outputs
     #len_tot = trajectory.get_len()
     #u = data_storage.get(SimData.control)
@@ -160,7 +160,7 @@ def test_mapper_semantic_planner(*args, **kwargs):
     ax[0].set_xlabel(r"$t (s)$")
     ax[0].set_ylabel(r"$u$")
     #ax[0].set_xlim(-0.5,5)
-    ax[0].set_ylim(-3,2)
+    ax[0].set_ylim(-3,3)
     ax[0].set_aspect('equal', 'box')
     ax[0].grid(True)
 
@@ -173,12 +173,12 @@ def test_mapper_semantic_planner(*args, **kwargs):
     ax[1].set_xlabel(r"$t (s)$")
     ax[1].set_ylabel(r"$u$")
     #ax[1].set_xlim(-0.5,5)
-    ax[1].set_ylim(-3,2)
+    ax[1].set_ylim(-3,3)
     ax[1].set_aspect('equal', 'box')
     ax[1].grid(True)
-
-    #plt.savefig("./images/velocities/final_no_obs_2.png")
-    #plt.show()
+    plt.tight_layout()
+    plt.savefig("./images/velocities/final_no_obs_2.png")
+    plt.show()
     
     
 
