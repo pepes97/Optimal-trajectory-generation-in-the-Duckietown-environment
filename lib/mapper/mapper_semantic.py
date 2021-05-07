@@ -184,7 +184,7 @@ class MapperSemantic():
     def draw_path(self):
         if np.array(self.proj_planner!=None).all():
             proj = self.rob2cam(self.proj_planner[None])[0]
-            robot_p = np.array([0.07,0.0])
+            robot_p = np.array([0.05,0.0])
             rob = self.rob2cam(robot_p[None])[0]
             cv2.circle(self.plot_image_p, (rob[0], rob[1]), 10, (255, 0, 0), -1)
             cv2.arrowedLine(self.plot_image_p, (rob[0], rob[1]), (proj[0], proj[1]), (255, 0, 0), 5) # distance to projection
