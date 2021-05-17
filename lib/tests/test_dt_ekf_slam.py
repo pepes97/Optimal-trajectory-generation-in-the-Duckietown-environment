@@ -155,8 +155,9 @@ def test_duckietown_ekf_slam(*args, **kwargs):
 
         obs, reward, done, info = env.step(u)
 
-        actual_u = np.array(info['Simulator']['action'])
+        actual_u = np.array(info['Simulator']['dW']) # added, left - right encoders
 
+        print(info)
         WHEEL_DIST = 0.102
         RADIUS = 0.0318
         u = np.array([RADIUS/2 * (actual_u[1]+actual_u[0]), RADIUS/WHEEL_DIST * (actual_u[1]-actual_u[0])])/dt

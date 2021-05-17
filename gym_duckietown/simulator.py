@@ -1497,6 +1497,8 @@ class Simulator(gym.Env):
         # Get the position relative to the right lane tangent
 
         info["action"] = list(self.last_action)
+        # ADDED
+        info["dW"] = list(self.state.dW)
         if self.full_transparency:
             #             info['desc'] = """
             #
@@ -1982,12 +1984,18 @@ def _update_pos(self, action):
 
     returns pos, angle
     """
-
+    # encoders (added)
+    axis_left_rad=self.state.axis_left_rad
+    axis_right_rad=self.state.axis_right_rad
+    
     action = DynamicsInfo(motor_left=action[0], motor_right=action[1])
     self.state = self.state.integrate(self.delta_time, action)
     q = self.state.TSE2_from_state()[0]
     pos, angle = self.weird_from_cartesian(q)
     pos = np.asarray(pos)
+    # encoders (added)
+    self.state.dW = np.array([(self.state.axis_left_rad-axis_left_rad), \
+        (self.state.axis_right_rad-axis_right_rad)])
     return pos, angle
 
 

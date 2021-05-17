@@ -155,7 +155,7 @@ def test_mapper_semantic_planner_obstacles(*args, **kwargs):
     # transformer 
     transformer = FrenetDKTransform()
     # Controller
-    controller = FrenetIOLController(.05, 0.0, 5, 0.0, 0.0)
+    controller = FrenetIOLController(.05, 0.01, 5, 0.01, 0.01)
     # Mapper
     mapper = MapperSemanticObstacles()
     # Env initialize
